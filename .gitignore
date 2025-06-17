@@ -81,3 +81,7 @@ turbo/
 .cache/
 
 __pycache__/
+
+# Python virtual environments
+venv/
+.venv/

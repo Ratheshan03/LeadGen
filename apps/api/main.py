@@ -1,16 +1,29 @@
 from fastapi import FastAPI
-from app.api.routes import business
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+import os
+import sys
 
-app = FastAPI()
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+from routes import business
 
-# Optional CORS config
+# Load environment variables
+load_dotenv()
+
+app = FastAPI(
+    title="Business Crawler API",
+    description="Fetch businesses using Google Places API",
+    version="1.0.0"
+)
+
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],  # or ["*"] to allow all for dev
+    allow_origins=["*"],  # Update this with frontend URL later
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-app.include_router(business.router, prefix="/api")
+# Include routers
+app.include_router(business.router, prefix="/api/business", tags=["Business"])
