@@ -1,0 +1,150 @@
+import streamlit as st
+from api.config.constants import AU_REGIONS
+from utils.api import crawl_text_search_full, crawl_custom_text_search, crawl_text_search_trial, get_region_coverage
+
+st.set_page_config(page_title="🔍 Text Search Crawler", layout="wide")
+
+# === Header ===
+st.title("Text Based Business/Leads Generator")
+st.markdown("""
+Use the Google Places **Text Search API** to retrieve business leads.
+
+- Manually enter a query (e.g., `Offices, Universities`) to crawl with text bias.
+- Or trigger a **full automated crawl** using your predefined regions and business types.
+""")  
+
+# === Manual Text Search Form with Dynamic Region Input ===
+with st.form("text_search_form"):
+    query = st.text_input("Enter search query (e.g., 'Corporate offices', 'Services')", max_chars=100)
+
+    # Dropdown for State
+    selected_state = st.selectbox("Select State", options=list(AU_REGIONS.keys()))
+
+    # Provide dynamic and editable region input
+    region_options = AU_REGIONS.get(selected_state, [])
+    default_region = region_options[0] if region_options else ""
+
+    selected_region = st.selectbox(
+        "Select or Enter Region/City",
+        options=region_options + ["<Enter custom region>"],
+        index=0
+    )
+
+    # If custom region selected, show a text input
+    if selected_region == "<Enter custom region>":
+        selected_region = st.text_input("Enter custom region/city")
+
+    submitted = st.form_submit_button("Start Text Search Crawl")
+
+if submitted:
+    if not query.strip():
+        st.warning("Please enter a valid search term.")
+    elif not selected_region.strip():
+        st.warning("Please enter a region or city.")
+    else:
+        with st.spinner(f"Running text search crawl for: {query} in {selected_region}, {selected_state}"):
+            result = crawl_custom_text_search(query, selected_state, selected_region)
+
+        if "error" in result:
+            st.error(result["error"])
+        else:
+            st.success("✅ Text Search Crawl Completed!")
+            st.markdown(f"**Total businesses saved:** `{result.get('total_saved', 0)}`")
+            st.markdown(f"**Tiles scanned:** `{result.get('tiles_scanned', 0)}`")
+
+            if result.get("details"):
+                st.markdown("### 📍 Results Per Region")
+                st.dataframe(result["details"], use_container_width=True)
+
+            if result.get("failures"):
+                st.markdown("### ⚠️ Failures / Errors")
+                st.json(result["failures"])
+
+
+# === Divider ===
+st.divider()
+
+# === Automated Text Search Crawl ===
+st.subheader("🌏 Full-Australia Automated Text Search Crawl")
+
+with st.form("auto_textsearch_form"):
+    dry_run = st.checkbox("🔬 Run as Dry Run (no DB writes)", value=True)
+    auto_submit = st.form_submit_button("🚀 Start Full Automated Text Search Crawl")
+
+if auto_submit:
+    with st.spinner("Running full-text search crawl across AU regions..."):
+        result = crawl_text_search_full(dry_run=dry_run)
+
+    if "error" in result:
+        st.error(result["error"])
+    else:
+        st.success(result.get("message", "✅ Automated Crawl Completed!"))
+
+        if dry_run:
+            st.markdown(f"**Total Business Types:** `{result.get('total_business_types', 0)}`")
+            st.markdown(f"**Total Tiles:** `{result.get('total_tiles', 0)}`")
+            st.markdown(f"**Simulated API Requests:** `{result.get('total_simulated_requests', 0)}`")
+            st.markdown("### 🔍 Sample Planned Requests (first 10)")
+            st.dataframe(result.get("planned_requests", []), use_container_width=True)
+            st.info(result.get("note", "No actual API or DB calls were made."))
+        else:
+            st.markdown(f"**Total businesses saved:** `{result.get('total_saved', 0)}`")
+            st.markdown(f"**Tiles scanned:** `{result.get('tiles_scanned', 0)}`")
+
+            if result.get("details"):
+                st.markdown("### 📍 Saved Results per Region")
+                st.dataframe(result["details"], use_container_width=True)
+
+            if result.get("failures"):
+                st.markdown("### ⚠️ Failures or Skipped Tiles")
+                st.json(result["failures"])
+
+# === Divider ===
+st.divider()
+
+# === 🚧 Trial Run ===
+st.subheader("🧪 Trial Run - Limited Region Scan")
+
+with st.form("trial_run_form"):
+    trial_limit = st.slider("Number of tiles to scan", min_value=5, max_value=100, step=5, value=20)
+    run_trial = st.form_submit_button("🔁 Run Trial Crawl")
+
+if run_trial:
+    with st.spinner(f"Running trial crawl with {trial_limit} tiles..."):
+        trial_result = crawl_text_search_trial(limit_tiles=trial_limit)
+
+    if "error" in trial_result:
+        st.error(trial_result["error"])
+    else:
+        st.success(trial_result.get("message", "✅ Trial Completed!"))
+        st.markdown(f"**Tiles Scanned:** `{trial_result.get('tiles_scanned', 0)}`")
+        st.markdown(f"**Businesses Saved:** `{trial_result.get('total_saved', 0)}`")
+
+        if trial_result.get("details"):
+            st.markdown("### ✅ Trial Crawl - Region-wise Results")
+            st.dataframe(trial_result["details"], use_container_width=True)
+
+# === Divider ===
+st.divider()
+
+# === 🗺️ Coverage Checker ===
+st.subheader("📍 Check Region Coverage")
+
+with st.form("coverage_form"):
+    coverage_state = st.selectbox("State", options=["All"] + list(AU_REGIONS.keys()))
+    coverage_region = st.text_input("Region / City (Optional)", placeholder="Leave blank for all")
+
+    run_check = st.form_submit_button("🔍 Check Coverage")
+
+if run_check:
+    with st.spinner("Checking lead coverage in region..."):
+        coverage_data = get_region_coverage(state=coverage_state if coverage_state != "All" else None,
+                                            region=coverage_region if coverage_region.strip() else None)
+
+    if "error" in coverage_data:
+        st.error(coverage_data["error"])
+    else:
+        st.success("✅ Region Coverage Retrieved")
+        st.markdown(f"**State:** `{coverage_data['state']}`")
+        st.markdown(f"**Region:** `{coverage_data['region']}`")
+        st.markdown(f"**Total Leads Stored:** `{coverage_data['total_leads']}`")

@@ -10,11 +10,17 @@ class LeadModel(BaseModel):
     location: dict  # Contains lat/lng
     place_id: str
     types: List[str] = Field(default_factory=list)
-    state: Optional[str]  # Added for state tracking
-    region: Optional[str]  # Specific area or sub-region if available
+
+    # Location metadata
+    state: Optional[str]
+    region: Optional[str]  # City
+    category: Optional[str]  # e.g. "Retail & Suppliers"
+    business_type: Optional[str]  # e.g. "office_supply_store"
+
+    # Timestamp for crawl tracking
     retrieved_at: datetime = Field(default_factory=datetime.utcnow)
-    
-    # Optional metadata for marketing flow
+
+    # Optional marketing metadata
     contacted: bool = False
     email_sent: bool = False
     sms_sent: bool = False

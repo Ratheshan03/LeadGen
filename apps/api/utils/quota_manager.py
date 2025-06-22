@@ -1,9 +1,10 @@
 import os
 import json
 from datetime import datetime
+import tempfile
 
 QUOTA_FILE = "api_quota_usage.json"
-MAX_MONTHLY_QUOTA = 9500  # Cap below 10k for safety
+MAX_MONTHLY_QUOTA = 900  # Cap below Google’s free tier
 
 class QuotaManager:
     def __init__(self, max_requests=MAX_MONTHLY_QUOTA):
@@ -19,9 +20,7 @@ class QuotaManager:
             self.save_usage()
 
         if self.usage_data["month"] != self.current_month():
-            # New month → reset usage
-            self.usage_data = {"month": self.current_month(), "count": 0}
-            self.save_usage()
+            self.reset_usage()
 
     def current_month(self):
         return datetime.utcnow().strftime("%Y-%m")
@@ -31,8 +30,11 @@ class QuotaManager:
         self.save_usage()
 
     def save_usage(self):
-        with open(QUOTA_FILE, "w") as f:
-            json.dump(self.usage_data, f)
+        # Atomic write to avoid data loss
+        with tempfile.NamedTemporaryFile("w", delete=False, dir=".") as tf:
+            json.dump(self.usage_data, tf)
+            tempname = tf.name
+        os.replace(tempname, QUOTA_FILE)
 
     def get_usage(self):
         return self.usage_data["count"]
@@ -42,3 +44,7 @@ class QuotaManager:
 
     def is_within_limit(self):
         return self.get_usage() < self.max_requests
+
+    def reset_usage(self):
+        self.usage_data = {"month": self.current_month(), "count": 0}
+        self.save_usage()

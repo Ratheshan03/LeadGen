@@ -13,6 +13,10 @@ class LeadBase(BaseModel):
     types: Optional[List[str]] = Field(default_factory=list)
     state: Optional[str]
     region: Optional[str]
+    
+    # Added for better categorization
+    category: Optional[str]
+    business_type: Optional[str]
 
 
 class LeadCreate(LeadBase):
@@ -39,4 +43,6 @@ class LeadPublic(BaseModel):
     types: Optional[List[str]] = Field(default_factory=list)
     state: Optional[str]
     region: Optional[str]
+    category: Optional[str]
+    business_type: Optional[str]
     tags: List[str] = Field(default_factory=list)

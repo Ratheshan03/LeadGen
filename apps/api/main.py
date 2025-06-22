@@ -3,11 +3,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 import os
 import sys
+import asyncio
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
-from routes import business
 
-# Load environment variables
+from routes import business
+from db.mongo import init_db_indexes
+
 load_dotenv()
 
 app = FastAPI(
@@ -16,14 +18,20 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS
+# CORS for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Update this with frontend URL later
+    allow_origins=["*"],  # Replace with actual frontend domain
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Include routers
+# Register routes
 app.include_router(business.router, prefix="/api/business", tags=["Business"])
+
+# Run Mongo index setup at startup
+@app.on_event("startup")
+async def startup_event():
+    await init_db_indexes()
+    print("App started and DB indexes checked.")
