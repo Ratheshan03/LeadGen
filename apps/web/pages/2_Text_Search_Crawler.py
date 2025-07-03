@@ -1,5 +1,5 @@
 import streamlit as st
-from api.config.constants import AU_REGIONS
+from api.config.constants import AU_REGIONS, ALL_BUSINESS_TYPES
 from utils.api import crawl_text_search_full, crawl_custom_text_search, crawl_text_search_trial, get_region_coverage
 
 st.set_page_config(page_title="🔍 Text Search Crawler", layout="wide")
@@ -14,42 +14,51 @@ Use the Google Places **Text Search API** to retrieve business leads.
 """)  
 
 # === Manual Text Search Form with Dynamic Region Input ===
-with st.form("text_search_form"):
-    query = st.text_input("Enter search query (e.g., 'Corporate offices', 'Services')", max_chars=100)
+st.subheader("🛠️ Manual Text Search Crawl")
 
-    # Dropdown for State
-    selected_state = st.selectbox("Select State", options=list(AU_REGIONS.keys()))
+# Select Business Type (from constants)
+selected_business_type = st.selectbox(
+    "Select Business Type",
+    options=ALL_BUSINESS_TYPES,
+    index=0,
+    help="Choose the type of business to search (e.g., 'lawyer', 'university')"
+)
 
-    # Provide dynamic and editable region input
-    region_options = AU_REGIONS.get(selected_state, [])
-    default_region = region_options[0] if region_options else ""
+# Select State
+selected_state = st.selectbox(
+    "Select State",
+    options=list(AU_REGIONS.keys()),
+    index=0
+)
 
-    selected_region = st.selectbox(
-        "Select or Enter Region/City",
-        options=region_options + ["<Enter custom region>"],
-        index=0
-    )
+# Get corresponding regions/cities
+region_options = AU_REGIONS.get(selected_state, [])
+selected_region_option = st.selectbox(
+    "Select Region/City",
+    options=region_options + ["<Enter custom region>"],
+    index=0
+)
 
-    # If custom region selected, show a text input
-    if selected_region == "<Enter custom region>":
-        selected_region = st.text_input("Enter custom region/city")
+# If "custom region" selected, prompt for input
+custom_region = ""
+if selected_region_option == "<Enter custom region>":
+    custom_region = st.text_input("Enter custom region/city name manually")
 
-    submitted = st.form_submit_button("Start Text Search Crawl")
+# Submit button
+if st.button("Start Text Search Crawl"):
+    region_to_use = custom_region.strip() if selected_region_option == "<Enter custom region>" else selected_region_option
 
-if submitted:
-    if not query.strip():
-        st.warning("Please enter a valid search term.")
-    elif not selected_region.strip():
-        st.warning("Please enter a region or city.")
+    if not selected_business_type or not region_to_use:
+        st.warning("Please select a business type and a region.")
     else:
-        with st.spinner(f"Running text search crawl for: {query} in {selected_region}, {selected_state}"):
-            result = crawl_custom_text_search(query, selected_state, selected_region)
+        with st.spinner(f"Running crawl for '{selected_business_type}' in {region_to_use}, {selected_state}..."):
+            result = crawl_custom_text_search(query=selected_business_type, state=selected_state, region=region_to_use)
 
         if "error" in result:
             st.error(result["error"])
         else:
-            st.success("✅ Text Search Crawl Completed!")
-            st.markdown(f"**Total businesses saved:** `{result.get('total_saved', 0)}`")
+            st.success("✅ Text Search Crawl Completed")
+            st.markdown(f"**Businesses saved:** `{result.get('total_saved', 0)}`")
             st.markdown(f"**Tiles scanned:** `{result.get('tiles_scanned', 0)}`")
 
             if result.get("details"):

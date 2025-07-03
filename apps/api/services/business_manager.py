@@ -160,9 +160,9 @@ class BusinessManager:
                 }
             }
 
-            print(f"Searching tile in {region}, {state}")
+            print(f"Searching tile: {tile} for {query} in {state}, {region}")
             try:
-                results, _ = maps_service.text_search_places(query, location_bias)
+                results = maps_service.text_search_places(query, location_bias)
                 for result in results:
                     place_id = result.get("place_id") or result.get("id")
                     if not place_id or await is_duplicate(db, place_id):
@@ -182,12 +182,31 @@ class BusinessManager:
             except Exception as e:
                 failures.append({"region": region, "state": state, "error": str(e)})
 
+                # Convert ObjectIds to strings
+        def clean_mongo_obj(doc):
+            doc = dict(doc)
+            if "_id" in doc:
+                doc["_id"] = str(doc["_id"])
+            return doc
+
+        cleaned_samples = [clean_mongo_obj(biz) for biz in saved_data[:10]]
+
         return {
             "message": "✅ Custom text search completed.",
             "total_saved": total_saved,
             "duplicates_skipped": duplicates,
+            "tiles_scanned": len(tiles),
             "failures": failures,
-            "sample_results": saved_data[:10]  # show only top 10 in API response
+            "details": [
+                {
+                    "state": state,
+                    "region": region,
+                    "saved": total_saved
+                }
+            ],
+            "sample_results": cleaned_samples
         }
+
+
 
 

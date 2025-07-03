@@ -152,7 +152,7 @@ class GoogleMapsService:
         all_results = []
         page_token = None
 
-        for i in range(10):  # up to 10 pages (max allowed)
+        for i in range(10):
             if page_token:
                 # Follow-up paginated request
                 payload = {
@@ -168,6 +168,7 @@ class GoogleMapsService:
                     payload["locationBias"] = location_bias
 
             response = requests.post(GOOGLE_PLACES_TEXT_URL, json=payload, headers=headers)
+            print(f"Request {i+1}: {response.status_code} - {response.text[:100]}...")
             self.quota.increment()
 
             if response.status_code == 429:
