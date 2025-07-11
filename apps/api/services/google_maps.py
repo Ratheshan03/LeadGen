@@ -151,15 +151,12 @@ class GoogleMapsService:
 
         all_results = []
         page_token = None
+        pages_fetched = 0
 
-        for i in range(10):
+        for _ in range(10):  # Google only supports up to 10 pages
             if page_token:
-                # Follow-up paginated request
-                payload = {
-                    "pageToken": page_token
-                }
+                payload = {"pageToken": page_token}
             else:
-                # Initial request
                 payload = {
                     "textQuery": text_query,
                     "maxResultCount": max_results
@@ -168,7 +165,6 @@ class GoogleMapsService:
                     payload["locationBias"] = location_bias
 
             response = requests.post(GOOGLE_PLACES_TEXT_URL, json=payload, headers=headers)
-            print(f"Request {i+1}: {response.status_code} - {response.text[:100]}...")
             self.quota.increment()
 
             if response.status_code == 429:
@@ -184,6 +180,7 @@ class GoogleMapsService:
             data = response.json()
             results = data.get("places", [])
             all_results.extend(results)
+            pages_fetched += 1
 
             page_token = data.get("nextPageToken")
             if not page_token:
@@ -191,6 +188,9 @@ class GoogleMapsService:
 
             time.sleep(1.5)  # Per Google API best practice
 
-        return all_results
-
+        return {
+            "results": all_results,
+            "pages_fetched": pages_fetched,
+            "total_returned": len(all_results)
+        }
 

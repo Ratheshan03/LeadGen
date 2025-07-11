@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Query
-import asyncio
 from services.google_maps import GoogleMapsService
 from services.business_manager import BusinessManager
 from config.constants import REGION_COORDINATES, AU_REGIONS, BUSINESS_CATEGORIES, ALL_BUSINESS_TYPES
-from utils.helpers import generate_text_search_tiles
+from utils.helpers import generate_tiles_for_region_unified
 from typing import List, Optional
 from collections import defaultdict
 from db.mongo import leads_collection, db
@@ -185,17 +184,18 @@ async def leads_summary(
 
 
 
-
 @router.get("/crawl/textsearch/custom")
 async def crawl_text_search_custom_route(
     query: str = Query(..., description="Free-text query (e.g., 'plumber', 'accountants')"),
     state: str = Query(..., description="Australian state"),
-    region: str = Query(..., description="City or region within the state")
+    region: str = Query(..., description="City or region within the state"),
+    dry_run: bool = False
 ):
     """
     Custom text search for user-defined region + query.
     """
-    return await business_manager.crawl_custom_text_search(query, state, region)
+    return await business_manager.crawl_custom_text_search(query, state, region, dry_run)
+
 
 
 
@@ -208,12 +208,17 @@ async def crawl_text_search_full_route(dry_run: bool = False, limit_tiles: int =
     """
     all_types = ALL_BUSINESS_TYPES
     # print("Running automated text search for types:", all_types)
-    all_tiles = generate_text_search_tiles()
-    # print(f"Generated {len(all_tiles)} tiles.")
+    all_tiles = []
+    for state, regions in AU_REGIONS.items():
+        for region in regions:
+            region_tiles = generate_tiles_for_region_unified(state, region)
+            all_tiles.extend(region_tiles)
 
-    if limit_tiles > 0:
-        all_tiles = all_tiles[:limit_tiles]
-        # print(f"Limiting to first {limit_tiles} tiles for this run.")
+        if limit_tiles > 0:
+            all_tiles = all_tiles[:limit_tiles]
+    
+    # print(f"Generated unified tiles: {len(all_tiles)} across {len(AU_REGIONS)} states.")
+
 
     if not all_tiles:
         return {"error": "No dynamic tiles could be generated."}

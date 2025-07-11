@@ -44,6 +44,9 @@ custom_region = ""
 if selected_region_option == "<Enter custom region>":
     custom_region = st.text_input("Enter custom region/city name manually")
 
+# Checkbox for dry run
+run_custom_dry = st.checkbox("🔬 Dry Run (simulate only)", value=True)
+
 # Submit button
 if st.button("Start Text Search Crawl"):
     region_to_use = custom_region.strip() if selected_region_option == "<Enter custom region>" else selected_region_option
@@ -52,22 +55,35 @@ if st.button("Start Text Search Crawl"):
         st.warning("Please select a business type and a region.")
     else:
         with st.spinner(f"Running crawl for '{selected_business_type}' in {region_to_use}, {selected_state}..."):
-            result = crawl_custom_text_search(query=selected_business_type, state=selected_state, region=region_to_use)
+            result = crawl_custom_text_search(
+                        query=selected_business_type,
+                        state=selected_state,
+                        region=region_to_use,
+                        dry_run=run_custom_dry
+                    )
 
         if "error" in result:
             st.error(result["error"])
         else:
-            st.success("✅ Text Search Crawl Completed")
-            st.markdown(f"**Businesses saved:** `{result.get('total_saved', 0)}`")
-            st.markdown(f"**Tiles scanned:** `{result.get('tiles_scanned', 0)}`")
+            if run_custom_dry:
+                st.success("✅ Dry Run Simulation Completed")
+                st.markdown(f"**Tiles estimated:** `{result.get('total_tiles', 0)}`")
+                st.markdown(f"**Estimated Requests:** `{result.get('expected_requests', 0)}`")
+                st.markdown("### 🔍 Dry Run Details")
+                st.json(result.get("details", []))
+            else:
+                st.success("✅ Text Search Crawl Completed")
+                st.markdown(f"**Businesses saved:** `{result.get('total_saved', 0)}`")
+                st.markdown(f"**Tiles scanned:** `{result.get('tiles_scanned', 0)}`")
 
-            if result.get("details"):
-                st.markdown("### 📍 Results Per Region")
-                st.dataframe(result["details"], use_container_width=True)
+            
+                if result.get("details"):
+                    st.markdown("### 📍 Results Per Region")
+                    st.dataframe(result["details"], use_container_width=True)
 
-            if result.get("failures"):
-                st.markdown("### ⚠️ Failures / Errors")
-                st.json(result["failures"])
+                if result.get("failures"):
+                    st.markdown("### ⚠️ Failures / Errors")
+                    st.json(result["failures"])
 
 
 # === Divider ===

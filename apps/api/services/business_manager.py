@@ -1,6 +1,6 @@
 from db.mongo import db
 from db.queries import is_duplicate, insert_lead, insert_leads_batch
-from utils.helpers import transform_place_result, generate_tiles_for_region
+from utils.helpers import transform_place_result, generate_tiles_for_region_unified
 from services.google_maps import GoogleMapsService
 
 class BusinessManager:
@@ -52,18 +52,12 @@ class BusinessManager:
 
 
     async def crawl_using_text_search(self, search_query: str, tiles: list, dry_run: bool = False):
-        """
-        Crawl businesses using Google Text Search API across multiple tiles.
-        Each tile is a locationBias rectangle.
-        If dry_run=True, simulates logic without API or DB access.
-        """
         total_saved = 0
         failures = []
         detailed_results = []
         dry_run_summary = []
 
         if dry_run:
-            print("DRY RUN mode - no real requests will be sent")
             for tile in tiles:
                 dry_run_summary.append({
                     "region": tile["region"],
@@ -72,7 +66,6 @@ class BusinessManager:
                     "tile_name": tile.get("tile_name"),
                     "simulated_request": True
                 })
-
             return {
                 "message": "✅ Dry run simulation complete",
                 "total_saved": 0,
@@ -81,7 +74,6 @@ class BusinessManager:
                 "details": dry_run_summary
             }
 
-        # Normal real-mode
         maps_service = GoogleMapsService()
 
         for tile in tiles:
@@ -92,15 +84,18 @@ class BusinessManager:
                 }
             }
 
-            print(f"\nSearching in tile: {tile['region']}, {tile['state']} for '{search_query}'")
             try:
-                results = maps_service.text_search_places(
+                print(f"\n📍 Tile: {tile['region']} ({tile['state']}), Query: '{search_query}'")
+                result_data = maps_service.text_search_places(
                     text_query=search_query,
                     location_bias=location_bias,
                     max_results=20
                 )
 
+                results = result_data["results"]
+                pages_fetched = result_data["pages_fetched"]
                 count = 0
+
                 for result in results:
                     place_id = result.get("place_id") or result.get("id")
                     if not place_id or await is_duplicate(db, place_id):
@@ -115,16 +110,17 @@ class BusinessManager:
                     await insert_lead(db, business_data)
                     count += 1
 
-                print(f"Saved {count} results.")
+                print(f"✅ {count} saved from {pages_fetched} pages")
                 total_saved += count
                 detailed_results.append({
                     "region": tile["region"],
                     "state": tile["state"],
-                    "saved": count
+                    "saved": count,
+                    "pages": pages_fetched
                 })
 
             except Exception as e:
-                print(f"Error in tile {tile['region']} - {str(e)}")
+                print(f"❌ Error in tile {tile['region']} - {str(e)}")
                 failures.append({
                     "region": tile["region"],
                     "state": tile["state"],
@@ -132,20 +128,36 @@ class BusinessManager:
                 })
 
         return {
-            "message": "✅ Text Search completed",
+            "message": "✅ Full crawl completed",
             "total_saved": total_saved,
             "tiles_scanned": len(tiles),
             "failures": failures,
             "details": detailed_results
         }
-    
+        
 
-    async def crawl_custom_text_search(self, query: str, state: str, region: str):
+    async def crawl_custom_text_search(self, query: str, state: str, region: str, dry_run: bool = False):
         maps_service = GoogleMapsService()
-        tiles = generate_tiles_for_region(state, region)
+        tiles = generate_tiles_for_region_unified(state, region)
 
         if not tiles:
             return {"error": f"No tiles found for region {region}"}
+        
+        if dry_run:
+            return {
+                "message": f"✅ DRY RUN for {region}, {state}",
+                "total_tiles": len(tiles),
+                "expected_requests": len(tiles),
+                "details": [
+                    {
+                        "state": state,
+                        "region": region,
+                        "business_type": query,
+                        "tile_count": len(tiles),
+                    }
+                ]
+            }
+
 
         total_saved = 0
         duplicates = 0
@@ -160,9 +172,11 @@ class BusinessManager:
                 }
             }
 
-            print(f"Searching tile: {tile} for {query} in {state}, {region}")
             try:
-                results = maps_service.text_search_places(query, location_bias)
+                print(f"Searching {query} in {region}, {state}")
+                result_data = maps_service.text_search_places(query, location_bias)
+                results = result_data["results"]
+
                 for result in results:
                     place_id = result.get("place_id") or result.get("id")
                     if not place_id or await is_duplicate(db, place_id):
@@ -182,17 +196,13 @@ class BusinessManager:
             except Exception as e:
                 failures.append({"region": region, "state": state, "error": str(e)})
 
-                # Convert ObjectIds to strings
-        def clean_mongo_obj(doc):
-            doc = dict(doc)
-            if "_id" in doc:
-                doc["_id"] = str(doc["_id"])
-            return doc
-
-        cleaned_samples = [clean_mongo_obj(biz) for biz in saved_data[:10]]
+        cleaned_samples = [
+            {"_id": str(doc.get("_id")), **{k: v for k, v in doc.items() if k != "_id"}}
+            for doc in saved_data[:10]
+        ]
 
         return {
-            "message": "✅ Custom text search completed.",
+            "message": "✅ Custom crawl done.",
             "total_saved": total_saved,
             "duplicates_skipped": duplicates,
             "tiles_scanned": len(tiles),
@@ -206,7 +216,6 @@ class BusinessManager:
             ],
             "sample_results": cleaned_samples
         }
-
 
 
 

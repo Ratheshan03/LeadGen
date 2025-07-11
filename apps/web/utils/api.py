@@ -81,17 +81,23 @@ def crawl_entire_state_or_all(dry_run=True):
         return {"error": f"Automated crawl failed: {str(e)}"}
     
 
-def crawl_custom_text_search(query: str, state: str, region: str):
+def crawl_custom_text_search(query: str, state: str, region: str, dry_run=False):
     """Call custom scoped text search API."""
     try:
         response = requests.get(
             f"{BASE_URL}/api/business/crawl/textsearch/custom",
-            params={"query": query, "state": state, "region": region}
+            params={
+                "query": query,
+                "state": state,
+                "region": region,
+                "dry_run": str(dry_run).lower()
+            }
         )
         response.raise_for_status()
         return response.json()
     except Exception as e:
         return {"error": f"Custom text search crawl failed: {str(e)}"}
+
 
 
 
