@@ -187,14 +187,35 @@ async def leads_summary(
 
 @router.get("/crawl/textsearch/custom")
 async def crawl_text_search_custom_route(
-    query: str = Query(..., description="Free-text query (e.g., 'plumber', 'accountants')"),
+    query: str = Query(..., description="Free-text query (e.g., 'plumber', 'accountants', or 'ALL')"),
     state: str = Query(..., description="Australian state"),
     region: str = Query(..., description="City or region within the state"),
     dry_run: bool = False
 ):
     """
     Custom text search for user-defined region + query.
+    If query='ALL', will iterate through all business types.
     """
+    if query.upper() == "ALL":
+        results = []
+        failures = []
+        details = []
+
+        for btype in ALL_BUSINESS_TYPES:
+            result = await business_manager.crawl_custom_text_search(btype, state, region, dry_run)
+            results.append(result)
+            failures.extend(result.get("failures", []))
+            details.extend(result.get("details", []))
+
+        return {
+            "message": f"✅ Crawled all business types in region: {region}, state: {state}",
+            "business_types": ALL_BUSINESS_TYPES,
+            "dry_run": dry_run,
+            "failures": failures,
+            "details": details
+        }
+
+    # Single business type
     return await business_manager.crawl_custom_text_search(query, state, region, dry_run)
 
 
@@ -211,12 +232,12 @@ async def crawl_text_search_full_route(dry_run: bool = False, limit_tiles: int =
     all_tiles = []
 
     # Load regions.geojson file
+    regions_geojson = None
     try:
-        regions_geojson = REGIONS_PATH
-        with open(regions_geojson, "r", encoding="utf-8") as f:
-            return json.load(f)
+        with open(REGIONS_PATH, "r", encoding="utf-8") as f:
+            regions_geojson = json.load(f)
     except Exception as e:
-        raise RuntimeError(f"Failed to load GeoJSON file at {regions_geojson}: {str(e)}")
+        raise RuntimeError(f"Failed to load GeoJSON file at {REGIONS_PATH}: {str(e)}")
 
     # Dynamic tile generation by state and GCCSA region
     for state_name, gccsa_list in GCCSA_REGIONS.items():

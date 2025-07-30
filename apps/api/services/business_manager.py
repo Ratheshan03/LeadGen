@@ -1,6 +1,6 @@
 from db.mongo import db
 from db.queries import is_duplicate, insert_lead, insert_leads_batch
-from utils.helpers import transform_place_result
+from utils.helpers import transform_place_result, generate_tiles_for_australia
 from services.google_maps import GoogleMapsService
 
 class BusinessManager:
@@ -142,87 +142,105 @@ class BusinessManager:
         }
 
         
-
-    # async def crawl_custom_text_search(self, query: str, state: str, region: str, dry_run: bool = False):
-    #     maps_service = GoogleMapsService()
-    #     tiles = generate_tiles_for_region_unified(state, region)
-
-    #     if not tiles:
-    #         return {"error": f"No tiles found for region {region}"}
+    async def crawl_custom_text_search(self, query: str, state: str, region: str, dry_run: bool = False):
+        maps_service = GoogleMapsService()
         
-    #     if dry_run:
-    #         return {
-    #             "message": f"✅ DRY RUN for {region}, {state}",
-    #             "total_tiles": len(tiles),
-    #             "expected_requests": len(tiles),
-    #             "details": [
-    #                 {
-    #                     "state": state,
-    #                     "region": region,
-    #                     "business_type": query,
-    #                     "tile_count": len(tiles),
-    #                 }
-    #             ]
-    #         }
+        # Use the new unified tile generator
+        tiles = generate_tiles_for_australia(state, region)
 
+        if not tiles:
+            return {"error": f"No tiles found for region {region}, state {state}"}
 
-    #     total_saved = 0
-    #     duplicates = 0
-    #     failures = []
-    #     saved_data = []
+        if dry_run:
+            dry_run_summary = [{
+                "state": tile.get("state"),
+                "region": tile.get("region"),
+                "business_type": query,
+                "tile_name": tile.get("tile_name"),
+                "simulated_request": True
+            } for tile in tiles]
 
-    #     for tile in tiles:
-    #         location_bias = {
-    #             "rectangle": {
-    #                 "low": tile["low"],
-    #                 "high": tile["high"]
-    #             }
-    #         }
+            return {
+                "message": f"✅ Dry run for {region}, {state} complete.",
+                "total_saved": 0,
+                "tiles_scanned": len(tiles),
+                "failures": [],
+                "details": dry_run_summary
+            }
 
-    #         try:
-    #             print(f"Searching {query} in {region}, {state}")
-    #             result_data = maps_service.text_search_places(query, location_bias)
-    #             results = result_data["results"]
+        total_saved = 0
+        failures = []
+        detailed_results = []
+        saved_data = []
 
-    #             for result in results:
-    #                 place_id = result.get("place_id") or result.get("id")
-    #                 if not place_id or await is_duplicate(db, place_id):
-    #                     duplicates += 1
-    #                     continue
+        for tile in tiles:
+            location_bias = {
+                "rectangle": {
+                    "low": tile.get("low"),
+                    "high": tile.get("high")
+                }
+            }
 
-    #                 business_data = transform_place_result(result)
-    #                 business_data["state"] = state
-    #                 business_data["region"] = region
-    #                 business_data["category"] = "TextSearch"
-    #                 business_data["business_type"] = query.lower()
+            try:
+                print(f"\n📍 Custom Tile: {tile.get('region')} ({tile.get('state')}), Query: '{query}'")
 
-    #                 await insert_lead(db, business_data)
-    #                 total_saved += 1
-    #                 saved_data.append(business_data)
+                result_data = maps_service.text_search_places(
+                    text_query=query,
+                    location_bias=location_bias,
+                    max_results=20
+                )
 
-    #         except Exception as e:
-    #             failures.append({"region": region, "state": state, "error": str(e)})
+                results = result_data.get("results", [])
+                pages_fetched = result_data.get("pages_fetched", 0)
+                count = 0
 
-    #     cleaned_samples = [
-    #         {"_id": str(doc.get("_id")), **{k: v for k, v in doc.items() if k != "_id"}}
-    #         for doc in saved_data[:10]
-    #     ]
+                for result in results:
+                    place_id = result.get("place_id") or result.get("id")
+                    if not place_id or await is_duplicate(db, place_id):
+                        continue
 
-    #     return {
-    #         "message": "✅ Custom crawl done.",
-    #         "total_saved": total_saved,
-    #         "duplicates_skipped": duplicates,
-    #         "tiles_scanned": len(tiles),
-    #         "failures": failures,
-    #         "details": [
-    #             {
-    #                 "state": state,
-    #                 "region": region,
-    #                 "saved": total_saved
-    #             }
-    #         ],
-    #         "sample_results": cleaned_samples
-    #     }
+                    business_data = transform_place_result(result)
+                    business_data.update({
+                        "state": tile.get("state"),
+                        "region": tile.get("region"),
+                        "category": "TextSearch",
+                        "business_type": query.lower()
+                    })
 
+                    await insert_lead(db, business_data)
+                    count += 1
+                    saved_data.append(business_data)
 
+                print(f"✅ {count} saved from {pages_fetched} pages")
 
+                total_saved += count
+                detailed_results.append({
+                    "region": tile.get("region"),
+                    "state": tile.get("state"),
+                    "saved": count,
+                    "pages": pages_fetched
+                })
+
+            except Exception as e:
+                error_msg = f"❌ Error in tile [{tile.get('region')} - {tile.get('state')} - Query: {query}]: {str(e)}"
+                print(error_msg)
+                failures.append({
+                    "region": tile.get("region"),
+                    "state": tile.get("state"),
+                    "business_type": query,
+                    "error": str(e)
+                })
+
+        cleaned_samples = [
+            {"_id": str(doc.get("_id")), **{k: v for k, v in doc.items() if k != "_id"}}
+            for doc in saved_data[:10]
+        ]
+
+        return {
+            "message": "✅ Custom crawl completed",
+            "total_saved": total_saved,
+            "tiles_scanned": len(tiles),
+            "failures": failures,
+            "details": detailed_results,
+            "sample_results": cleaned_samples
+        }

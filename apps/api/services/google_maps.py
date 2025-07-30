@@ -154,6 +154,8 @@ class GoogleMapsService:
         pages_fetched = 0
 
         for _ in range(10):  # Max 10 pages, 200 results
+            #console out put for debugging whcih page count is being fetched with the query
+            print(f"Fetching page {pages_fetched + 1} for query: {text_query}")
             if page_token:
                 payload = {"pageToken": page_token}
             else:

@@ -1,6 +1,21 @@
 import streamlit as st
-from api.config.constants import AU_REGIONS, ALL_BUSINESS_TYPES
+import os
+import sys
+import json
+from api.config.constants import ALL_BUSINESS_TYPES, GCCSA_REGIONS, AU_REGIONS, GEOJSON_MAP_PATHS
 from utils.api import crawl_text_search_full, crawl_custom_text_search, crawl_text_search_trial, get_region_coverage
+
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+if ROOT_DIR not in sys.path:
+    sys.path.append(ROOT_DIR)
+
+# Load LGA and Region maps (should be placed in your frontend data directory or read via API)
+with open(GEOJSON_MAP_PATHS["state_to_lgas"]) as f:
+    STATE_TO_LGAS = json.load(f)
+
+with open(GEOJSON_MAP_PATHS["state_to_regions"]) as f:
+    STATE_TO_REGIONS = json.load(f)
+
 
 st.set_page_config(page_title="🔍 Text Search Crawler", layout="wide")
 
@@ -16,25 +31,38 @@ Use the Google Places **Text Search API** to retrieve business leads.
 # === Manual Text Search Form with Dynamic Region Input ===
 st.subheader("🛠️ Manual Text Search Crawl")
 
-# Select Business Type (from constants)
+business_type_options = ["ALL"] + ALL_BUSINESS_TYPES
+
+# Select Business Type
 selected_business_type = st.selectbox(
     "Select Business Type",
-    options=ALL_BUSINESS_TYPES,
-    index=0,
-    help="Choose the type of business to search (e.g., 'lawyer', 'university')"
+    options=business_type_options,
+    index=0,  # Default to "ALL"
+    help="Choose the type of business to search (or 'ALL' for all types)"
 )
 
 # Select State
-selected_state = st.selectbox(
-    "Select State",
-    options=list(AU_REGIONS.keys()),
-    index=0
+selected_state = st.selectbox("Select State", options=list(AU_REGIONS.keys()), index=0)
+
+# Select Geo Type
+geo_type = st.selectbox(
+    "Select Geography Level",
+    options=["Regions", "LGA", "GCCSA"],
+    help="Choose which geo-level to select region from."
 )
 
-# Get corresponding regions/cities
-region_options = AU_REGIONS.get(selected_state, [])
+# Get available region options based on geo type and state
+region_options = []
+if geo_type == "Regions":
+    region_options = STATE_TO_REGIONS.get(selected_state, [])
+elif geo_type == "LGA":
+    region_options = STATE_TO_LGAS.get(selected_state, [])
+elif geo_type == "GCCSA":
+    region_options = GCCSA_REGIONS.get(selected_state, [])
+
+# Region Selection
 selected_region_option = st.selectbox(
-    "Select Region/City",
+    "Select Area",
     options=region_options + ["<Enter custom region>"],
     index=0
 )
@@ -44,7 +72,7 @@ custom_region = ""
 if selected_region_option == "<Enter custom region>":
     custom_region = st.text_input("Enter custom region/city name manually")
 
-# Checkbox for dry run
+# Dry run checkbox
 run_custom_dry = st.checkbox("🔬 Dry Run (simulate only)", value=True)
 
 # Submit button
@@ -56,11 +84,11 @@ if st.button("Start Text Search Crawl"):
     else:
         with st.spinner(f"Running crawl for '{selected_business_type}' in {region_to_use}, {selected_state}..."):
             result = crawl_custom_text_search(
-                        query=selected_business_type,
-                        state=selected_state,
-                        region=region_to_use,
-                        dry_run=run_custom_dry
-                    )
+                query=selected_business_type,
+                state=selected_state,
+                region=region_to_use,
+                dry_run=run_custom_dry
+            )
 
         if "error" in result:
             st.error(result["error"])
@@ -76,7 +104,6 @@ if st.button("Start Text Search Crawl"):
                 st.markdown(f"**Businesses saved:** `{result.get('total_saved', 0)}`")
                 st.markdown(f"**Tiles scanned:** `{result.get('tiles_scanned', 0)}`")
 
-            
                 if result.get("details"):
                     st.markdown("### 📍 Results Per Region")
                     st.dataframe(result["details"], use_container_width=True)

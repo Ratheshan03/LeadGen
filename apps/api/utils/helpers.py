@@ -25,7 +25,7 @@ def transform_place_result(result: dict) -> dict:
         "website": result.get("website") or result.get("websiteUri"),
         "location": result.get("geometry", {}).get("location") or result.get("location", {}),
         "types": result.get("types", []),
-        "tags": result.get("types", []),  # Tagging same as types for now
+        "tags": result.get("types", []),
         "rating": result.get("rating"),
         "total_reviews": result.get("user_ratings_total") or result.get("userRatingCount"),
         "opening_hours": result.get("opening_hours", {}).get("weekday_text", []) or result.get("regularOpeningHours", {}).get("weekdayDescriptions", []),
@@ -107,7 +107,7 @@ def generate_tiles_for_australia(
     target_region: str = None
 ):
 
-    print(f"\n📂 Loading GeoJSON data: {geojson_source} ...")
+    print(f"\n\U0001F4C2 Loading GeoJSON data: {geojson_source} ...")
     base_path = "data/geojson"
     geojson_filename_map = {
         "gccsa": "gccsa.geojson",
@@ -131,7 +131,7 @@ def generate_tiles_for_australia(
 
     region_area_key = "AREASQKM21"
 
-    print("🔍 Building geometry maps...")
+    print("\U0001F50D Building geometry maps...")
     for feature in region_data["features"]:
         name = feature["properties"].get(region_name_key, "").strip().lower()
         if feature.get("geometry"):
@@ -140,7 +140,7 @@ def generate_tiles_for_australia(
             region_area_map[name] = feature["properties"].get(region_area_key, 0)
             region_metadata_map[name] = feature["properties"]
 
-    print("🌐Setting up coordinate transformations...")
+    print("\U0001F310Setting up coordinate transformations...")
     project = pyproj.Transformer.from_crs("EPSG:7844", "EPSG:3857", always_xy=True).transform
     reverse_project = pyproj.Transformer.from_crs("EPSG:3857", "EPSG:7844", always_xy=True).transform
 
@@ -152,20 +152,17 @@ def generate_tiles_for_australia(
         gcc_name = metadata.get("GCC_NAME21", "").lower()
         sa4_name = metadata.get("SA4_NAME21", "").lower()
 
-        # 1. If inside GCCSA region, use 10km fixed
         if gcc_name in [g.lower() for g in GCCSA_REGIONS]:
             return 10
 
-        # 2. If name contains low-density indicators, use max override
         if any(keyword in name or keyword in sa4_name for keyword in LOW_DENSITY_REGION_KEYWORDS):
             return max(size for _, _, size in TILE_SIZE_OVERRIDES)
 
-        # 3. Tile size by area
         for min_area, max_area, size in TILE_SIZE_OVERRIDES:
             if min_area <= area < max_area:
                 return size
 
-        return 10  # Fallback
+        return 10
 
     def generate_tiles_for_geom(region_name, geom, tile_km_local):
         region_tiles = []
@@ -174,6 +171,12 @@ def generate_tiles_for_australia(
         tile_size_m = tile_km_local * 1000
         geom_m = transform(project, geom)
         min_x, min_y, max_x, max_y = geom_m.bounds
+
+        dynamic_buffer = 200 if region_area_map.get(region_name, 100) < 5 else 0
+        min_x -= dynamic_buffer
+        min_y -= dynamic_buffer
+        max_x += dynamic_buffer
+        max_y += dynamic_buffer
 
         row = 0
         x = min_x
@@ -247,7 +250,7 @@ def generate_tiles_for_australia(
         return all_tiles
 
     print(f"\n📍 No specific region provided. Generating tiles for all regions in: {geojson_source.upper()}")
-    for region_name, region_geom in tqdm(region_geom_map.items(), desc="🧱 Generating tiles"):
+    for region_name, region_geom in tqdm(region_geom_map.items(), desc="\U0001F9F1 Generating tiles"):
         print(f"\n🔎 Processing: {region_name} ...")
         try:
             tile_km_override = determine_tile_size(region_name, region_metadata_map.get(region_name, {}))
@@ -259,6 +262,7 @@ def generate_tiles_for_australia(
 
     print(f"\n✅ Total tiles generated: {len(all_tiles)}")
     return all_tiles
+
 
 
 # Get polygon geometry for a specific GCCSA region by name

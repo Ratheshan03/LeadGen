@@ -1,6 +1,7 @@
 import sys
 import os
 import json
+import requests
 from datetime import datetime
 from shapely.geometry import shape
 
@@ -9,18 +10,29 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from helpers import generate_tiles_for_australia
 from visualization import visualize_tiles_on_map, visualize_region_polygon
 
+BASE_URL = "http://localhost:8000"  # or wherever your FastAPI server runs
+
+def crawl_custom_text_search(query: str, state: str, region: str, dry_run=False):
+    """Call custom scoped text search API."""
+    try:
+        response = requests.get(
+            f"{BASE_URL}/api/business/crawl/textsearch/custom",
+            params={
+                "query": query,
+                "state": state,
+                "region": region,
+                "dry_run": str(dry_run).lower()
+            }
+        )
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        return {"error": f"Custom text search crawl failed: {str(e)}"}
+
+
+
 
 def get_polygon_from_geojson(region_name: str, geojson_type: str):
-    """
-    Loads and returns the polygon geometry of a given region from the specified GeoJSON.
-
-    Args:
-        region_name (str): Name of the region to look up.
-        geojson_type (str): One of 'gccsa', 'regions', or 'lga'.
-
-    Returns:
-        Tuple[str, Polygon or MultiPolygon]: Matched region name and Shapely geometry object.
-    """
     geojson_file_map = {
         "gccsa": "data/geojson/gccsa.geojson",
         "regions": "data/geojson/regions.geojson",
@@ -56,13 +68,17 @@ def get_polygon_from_geojson(region_name: str, geojson_type: str):
 
 
 if __name__ == "__main__":
-    tile_km = 5
+    tile_km = 10
     timestamp = datetime.now().strftime("%Y%m%d_%H%M")
 
-    region_name = "north melbourne"  # Must match the 'name' in geojson (case-insensitive)
-    geojson_type = "regions"  # options: 'gccsa', 'regions', 'lga'
+    # Test parameters
+    region_name = "north melbourne"
+    geojson_type = "regions"
+    state_name = "Victoria"
+    business_query = "ALL"
+    dry_run = False
 
-    print(f"🌏 Generating tiles for '{region_name}' using {geojson_type}.geojson at {tile_km}km resolution.")
+    print(f"🌏 Generating tiles for '{region_name}' using {geojson_type}.geojson at {tile_km}km resolution...")
 
     all_tiles = generate_tiles_for_australia(
         tile_km=tile_km,
@@ -78,13 +94,25 @@ if __name__ == "__main__":
     tile_map_path = f"output_maps/{region_safe}_tiles_{tile_km}km_{timestamp}.html"
 
     print(f"\n🗺️ Visualizing tiles for region: {region_name}...")
-    # Visualize original polygon boundary
     matched_name, matched_geom = get_polygon_from_geojson(region_name, geojson_type)
     if matched_geom:
         polygon_map_path = f"output_maps/{region_safe}_polygon_{tile_km}km_{timestamp}.html"
         visualize_region_polygon(matched_name, matched_geom, save_path=polygon_map_path, color="green", zoom=12)
 
-    # Visualize generated tiles
     visualize_tiles_on_map(all_tiles, save_path=tile_map_path, zoom=10, color="orange")
 
-    print("\n🎯 Done! Open the HTML files in your browser to inspect tile coverage.")
+    # 🚀 Actual crawl with ALL business types
+    print(f"\n🔍 Starting ACTUAL CRAWL: Query='{business_query}', State='{state_name}', Region='{region_name}'...")
+    crawl_response = crawl_custom_text_search(
+        query=business_query,
+        state=state_name,
+        region=region_name,
+        dry_run=dry_run
+    )
+
+    if "error" in crawl_response:
+        print(f"❌ Crawl failed: {crawl_response['error']}")
+    else:
+        print(f"✅ Crawl Success! Response:\n{json.dumps(crawl_response, indent=2)}")
+
+    print("\n🎯 Done! Open the HTML files in your browser to inspect tile coverage and polygon mapping.")

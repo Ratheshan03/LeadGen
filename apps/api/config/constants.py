@@ -1,3 +1,7 @@
+import os
+
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 # === BUSINESS CATEGORIES (Google Place Types) ===
 BUSINESS_CATEGORIES = {
     "Automotive": [
@@ -265,6 +269,14 @@ GCCSA_PATH = "data/geojson/gccsa.geojson"
 LGA_PATH = "data/geojson/lga.geojson"
 REGIONS_PATH = "data/geojson/regions.geojson"
 STATES_PATH = "data/geojson/states.geojson"
+
+
+# GeoJSON mapping files used for frontend crawling logic
+GEOJSON_MAP_PATHS = {
+    "state_to_lgas": os.path.join(BASE_DIR, "data", "geojson", "state_to_lgas_map.json"),
+    "state_to_regions": os.path.join(BASE_DIR, "data", "geojson", "state_to_regions_map.json"),
+}
+
 
 # --- STATE CODES ---
 AUSTRALIAN_STATES = [

@@ -40,7 +40,6 @@ def get_leads(state=None, type_=None, category=None, business_type=None):
         return {"error": f"Lead fetch failed: {str(e)}"}
 
 
-
 def get_summary_data(state=None, business_type=None):
     try:
         params = {}
@@ -53,7 +52,6 @@ def get_summary_data(state=None, business_type=None):
         return response.json()
     except Exception as e:
         return {"error": f"Summary fetch failed: {str(e)}"}
-
 
 
 def health_check():
@@ -97,8 +95,6 @@ def crawl_custom_text_search(query: str, state: str, region: str, dry_run=False)
         return response.json()
     except Exception as e:
         return {"error": f"Custom text search crawl failed: {str(e)}"}
-
-
 
 
 def crawl_text_search_full(dry_run=True):
