@@ -1,29 +1,19 @@
 import folium
 from folium.plugins import MarkerCluster
+from shapely.geometry import mapping
 
 
 def visualize_tiles_on_map(tiles, save_path="tiles_map.html", zoom=11, color="purple"):
-    """
-    Visualizes tile boundaries and centers on a Folium map.
-
-    Args:
-        tiles (List[Dict]): List of tile dictionaries containing lat/lon boundaries.
-        save_path (str): File path to save the HTML map.
-        zoom (int): Initial zoom level of the map.
-        color (str): Rectangle border color (e.g., 'blue', 'green', 'purple').
-    """
     if not tiles:
         print("⚠️ No tiles to visualize.")
         return
 
-    # 🧭 Use center of first tile
     first_tile = tiles[0]
     center_lat = (first_tile["low"]["latitude"] + first_tile["high"]["latitude"]) / 2
     center_lon = (first_tile["low"]["longitude"] + first_tile["high"]["longitude"]) / 2
 
     m = folium.Map(location=[center_lat, center_lon], zoom_start=zoom, control_scale=True)
 
-    # 📦 Draw rectangles
     for tile in tiles:
         bounds = [
             [tile["low"]["latitude"], tile["low"]["longitude"]],
@@ -39,7 +29,6 @@ def visualize_tiles_on_map(tiles, save_path="tiles_map.html", zoom=11, color="pu
             tooltip=tile_name,
         ).add_to(m)
 
-    # 📍 Add center markers
     marker_cluster = MarkerCluster().add_to(m)
     for tile in tiles:
         lat_c = (tile["low"]["latitude"] + tile["high"]["latitude"]) / 2
@@ -48,3 +37,37 @@ def visualize_tiles_on_map(tiles, save_path="tiles_map.html", zoom=11, color="pu
 
     m.save(save_path)
     print(f"✅ Tile map saved to: {save_path}")
+
+
+def visualize_region_polygon(region_name: str, polygon_geom, save_path="region_polygon_map.html", color="green", zoom=11):
+    """
+    Generic visualizer for any region polygon (GCCSA, LGA, Region, etc.)
+
+    Args:
+        region_name (str): Name of the region.
+        polygon_geom (Polygon or MultiPolygon): The Shapely geometry to plot.
+        save_path (str): Path to save the HTML file.
+        color (str): Outline color.
+        zoom (int): Initial zoom level for map.
+    """
+    if polygon_geom is None:
+        print("⚠️ No geometry to visualize.")
+        return
+
+    centroid = polygon_geom.centroid
+    m = folium.Map(location=[centroid.y, centroid.x], zoom_start=zoom)
+
+    folium.GeoJson(
+        mapping(polygon_geom),
+        name=region_name,
+        style_function=lambda x: {
+            "fillColor": color,
+            "color": color,
+            "weight": 2,
+            "fillOpacity": 0.25,
+        },
+        tooltip=region_name,
+    ).add_to(m)
+
+    m.save(save_path)
+    print(f"✅ Polygon map saved to: {save_path}")

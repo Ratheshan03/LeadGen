@@ -1,6 +1,6 @@
 from db.mongo import db
 from db.queries import is_duplicate, insert_lead, insert_leads_batch
-from utils.helpers import transform_place_result, generate_tiles_for_region_unified
+from utils.helpers import transform_place_result
 from services.google_maps import GoogleMapsService
 
 class BusinessManager:
@@ -60,8 +60,8 @@ class BusinessManager:
         if dry_run:
             for tile in tiles:
                 dry_run_summary.append({
-                    "region": tile["region"],
-                    "state": tile["state"],
+                    "region": tile.get("region"),
+                    "state": tile.get("state"),
                     "business_type": search_query,
                     "tile_name": tile.get("tile_name"),
                     "simulated_request": True
@@ -79,21 +79,22 @@ class BusinessManager:
         for tile in tiles:
             location_bias = {
                 "rectangle": {
-                    "low": tile["low"],
-                    "high": tile["high"]
+                    "low": tile.get("low"),
+                    "high": tile.get("high")
                 }
             }
 
             try:
-                print(f"\n📍 Tile: {tile['region']} ({tile['state']}), Query: '{search_query}'")
+                print(f"\n📍 Tile: {tile.get('region')} ({tile.get('state')}), Query: '{search_query}'")
+
                 result_data = maps_service.text_search_places(
                     text_query=search_query,
                     location_bias=location_bias,
                     max_results=20
                 )
 
-                results = result_data["results"]
-                pages_fetched = result_data["pages_fetched"]
+                results = result_data.get("results", [])
+                pages_fetched = result_data.get("pages_fetched", 0)
                 count = 0
 
                 for result in results:
@@ -102,28 +103,33 @@ class BusinessManager:
                         continue
 
                     business_data = transform_place_result(result)
-                    business_data["state"] = tile["state"]
-                    business_data["region"] = tile["region"]
-                    business_data["category"] = "TextSearch"
-                    business_data["business_type"] = search_query.lower()
+                    business_data.update({
+                        "state": tile.get("state"),
+                        "region": tile.get("region"),
+                        "category": "TextSearch",
+                        "business_type": search_query.lower()
+                    })
 
                     await insert_lead(db, business_data)
                     count += 1
 
                 print(f"✅ {count} saved from {pages_fetched} pages")
+
                 total_saved += count
                 detailed_results.append({
-                    "region": tile["region"],
-                    "state": tile["state"],
+                    "region": tile.get("region"),
+                    "state": tile.get("state"),
                     "saved": count,
                     "pages": pages_fetched
                 })
 
             except Exception as e:
-                print(f"❌ Error in tile {tile['region']} - {str(e)}")
+                error_msg = f"❌ Error during tile crawl [{tile.get('region')} - {tile.get('state')} - Query: {search_query}]: {str(e)}"
+                print(error_msg)
                 failures.append({
-                    "region": tile["region"],
-                    "state": tile["state"],
+                    "region": tile.get("region"),
+                    "state": tile.get("state"),
+                    "business_type": search_query,
                     "error": str(e)
                 })
 
@@ -134,88 +140,89 @@ class BusinessManager:
             "failures": failures,
             "details": detailed_results
         }
+
         
 
-    async def crawl_custom_text_search(self, query: str, state: str, region: str, dry_run: bool = False):
-        maps_service = GoogleMapsService()
-        tiles = generate_tiles_for_region_unified(state, region)
+    # async def crawl_custom_text_search(self, query: str, state: str, region: str, dry_run: bool = False):
+    #     maps_service = GoogleMapsService()
+    #     tiles = generate_tiles_for_region_unified(state, region)
 
-        if not tiles:
-            return {"error": f"No tiles found for region {region}"}
+    #     if not tiles:
+    #         return {"error": f"No tiles found for region {region}"}
         
-        if dry_run:
-            return {
-                "message": f"✅ DRY RUN for {region}, {state}",
-                "total_tiles": len(tiles),
-                "expected_requests": len(tiles),
-                "details": [
-                    {
-                        "state": state,
-                        "region": region,
-                        "business_type": query,
-                        "tile_count": len(tiles),
-                    }
-                ]
-            }
+    #     if dry_run:
+    #         return {
+    #             "message": f"✅ DRY RUN for {region}, {state}",
+    #             "total_tiles": len(tiles),
+    #             "expected_requests": len(tiles),
+    #             "details": [
+    #                 {
+    #                     "state": state,
+    #                     "region": region,
+    #                     "business_type": query,
+    #                     "tile_count": len(tiles),
+    #                 }
+    #             ]
+    #         }
 
 
-        total_saved = 0
-        duplicates = 0
-        failures = []
-        saved_data = []
+    #     total_saved = 0
+    #     duplicates = 0
+    #     failures = []
+    #     saved_data = []
 
-        for tile in tiles:
-            location_bias = {
-                "rectangle": {
-                    "low": tile["low"],
-                    "high": tile["high"]
-                }
-            }
+    #     for tile in tiles:
+    #         location_bias = {
+    #             "rectangle": {
+    #                 "low": tile["low"],
+    #                 "high": tile["high"]
+    #             }
+    #         }
 
-            try:
-                print(f"Searching {query} in {region}, {state}")
-                result_data = maps_service.text_search_places(query, location_bias)
-                results = result_data["results"]
+    #         try:
+    #             print(f"Searching {query} in {region}, {state}")
+    #             result_data = maps_service.text_search_places(query, location_bias)
+    #             results = result_data["results"]
 
-                for result in results:
-                    place_id = result.get("place_id") or result.get("id")
-                    if not place_id or await is_duplicate(db, place_id):
-                        duplicates += 1
-                        continue
+    #             for result in results:
+    #                 place_id = result.get("place_id") or result.get("id")
+    #                 if not place_id or await is_duplicate(db, place_id):
+    #                     duplicates += 1
+    #                     continue
 
-                    business_data = transform_place_result(result)
-                    business_data["state"] = state
-                    business_data["region"] = region
-                    business_data["category"] = "TextSearch"
-                    business_data["business_type"] = query.lower()
+    #                 business_data = transform_place_result(result)
+    #                 business_data["state"] = state
+    #                 business_data["region"] = region
+    #                 business_data["category"] = "TextSearch"
+    #                 business_data["business_type"] = query.lower()
 
-                    await insert_lead(db, business_data)
-                    total_saved += 1
-                    saved_data.append(business_data)
+    #                 await insert_lead(db, business_data)
+    #                 total_saved += 1
+    #                 saved_data.append(business_data)
 
-            except Exception as e:
-                failures.append({"region": region, "state": state, "error": str(e)})
+    #         except Exception as e:
+    #             failures.append({"region": region, "state": state, "error": str(e)})
 
-        cleaned_samples = [
-            {"_id": str(doc.get("_id")), **{k: v for k, v in doc.items() if k != "_id"}}
-            for doc in saved_data[:10]
-        ]
+    #     cleaned_samples = [
+    #         {"_id": str(doc.get("_id")), **{k: v for k, v in doc.items() if k != "_id"}}
+    #         for doc in saved_data[:10]
+    #     ]
 
-        return {
-            "message": "✅ Custom crawl done.",
-            "total_saved": total_saved,
-            "duplicates_skipped": duplicates,
-            "tiles_scanned": len(tiles),
-            "failures": failures,
-            "details": [
-                {
-                    "state": state,
-                    "region": region,
-                    "saved": total_saved
-                }
-            ],
-            "sample_results": cleaned_samples
-        }
+    #     return {
+    #         "message": "✅ Custom crawl done.",
+    #         "total_saved": total_saved,
+    #         "duplicates_skipped": duplicates,
+    #         "tiles_scanned": len(tiles),
+    #         "failures": failures,
+    #         "details": [
+    #             {
+    #                 "state": state,
+    #                 "region": region,
+    #                 "saved": total_saved
+    #             }
+    #         ],
+    #         "sample_results": cleaned_samples
+    #     }
 
 
 

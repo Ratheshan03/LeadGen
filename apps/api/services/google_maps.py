@@ -153,7 +153,7 @@ class GoogleMapsService:
         page_token = None
         pages_fetched = 0
 
-        for _ in range(10):  # Google only supports up to 10 pages
+        for _ in range(10):  # Max 10 pages, 200 results
             if page_token:
                 payload = {"pageToken": page_token}
             else:
@@ -161,8 +161,12 @@ class GoogleMapsService:
                     "textQuery": text_query,
                     "maxResultCount": max_results
                 }
-                if location_bias:
+
+                # Defensive: ensure location_bias format is correct
+                if location_bias and "rectangle" in location_bias:
                     payload["locationBias"] = location_bias
+                else:
+                    print("⚠️ Warning: No location bias applied or incorrect format. This may cause inaccurate results.")
 
             response = requests.post(GOOGLE_PLACES_TEXT_URL, json=payload, headers=headers)
             self.quota.increment()
@@ -174,7 +178,7 @@ class GoogleMapsService:
                 continue
 
             if response.status_code != 200:
-                print(f"Google Text Search API Error: {response.status_code}, {response.text}")
+                print(f"❌ Google Text Search API Error: {response.status_code}, {response.text}")
                 break
 
             data = response.json()
@@ -186,11 +190,12 @@ class GoogleMapsService:
             if not page_token:
                 break
 
-            time.sleep(1.5)  # Per Google API best practice
+            time.sleep(1.5)  # Google best practice
 
         return {
             "results": all_results,
             "pages_fetched": pages_fetched,
             "total_returned": len(all_results)
         }
+
 

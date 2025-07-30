@@ -260,592 +260,97 @@ REGION_COORDINATES = {
 }
 
 
-REGION_TILE_CONFIGS = {
-    # === Major Cities ===
-    "Melbourne": {
-        "tile_km": 5,
-        "width_km": 70,
-        "height_km": 90,
-        "bbox_override": {
-            "lat_min": -38.30,
-            "lat_max": -37.55,
-            "lon_min": 144.65,
-            "lon_max": 145.40
-        }
-    },
-    "Sydney": {
-        "tile_km": 5,
-        "width_km": 70,
-        "height_km": 90,
-        "bbox_override": {
-            "lat_min": -34.10,
-            "lat_max": -33.60,
-            "lon_min": 150.80,
-            "lon_max": 151.35
-        }
-    },
-    "Brisbane": {
-        "tile_km": 5,
-        "width_km": 60,
-        "height_km": 80,
-        "bbox_override": {
-            "lat_min": -27.70,
-            "lat_max": -27.30,
-            "lon_min": 152.90,
-            "lon_max": 153.20
-        }
-    },
-    "Perth": {
-        "tile_km": 5,
-        "width_km": 60,
-        "height_km": 80,
-        "bbox_override": {
-            "lat_min": -32.20,
-            "lat_max": -31.70,
-            "lon_min": 115.70,
-            "lon_max": 116.10
-        }
-    },
-    "Adelaide": {
-        "tile_km": 5,
-        "width_km": 60,
-        "height_km": 80,
-        "bbox_override": {
-            "lat_min": -35.10,
-            "lat_max": -34.70,
-            "lon_min": 138.40,
-            "lon_max": 138.75
-        }
-    },
+# --- GEOJSON FILE PATHS ---
+GCCSA_PATH = "data/geojson/gccsa.geojson"
+LGA_PATH = "data/geojson/lga.geojson"
+REGIONS_PATH = "data/geojson/regions.geojson"
+STATES_PATH = "data/geojson/states.geojson"
 
-    # === Mid-Sized Cities ===
-    "Gold Coast": {
-        "tile_km": 5,
-        "width_km": 40,
-        "height_km": 50,
-        "bbox_override": {
-            "lat_min": -28.10,
-            "lat_max": -27.80,
-            "lon_min": 153.30,
-            "lon_max": 153.60
-        }
-    },
-    "Canberra": {
-        "tile_km": 5,
-        "width_km": 30,
-        "height_km": 35,
-        "bbox_override": {
-            "lat_min": -35.45,
-            "lat_max": -35.10,
-            "lon_min": 148.90,
-            "lon_max": 149.30
-        }
-    },
-    "Hobart": {
-        "tile_km": 5,
-        "width_km": 30,
-        "height_km": 30,
-        "bbox_override": {
-            "lat_min": -43.10,
-            "lat_max": -42.75,
-            "lon_min": 147.10,
-            "lon_max": 147.50
-        }
-    },
-    "Newcastle": {
-        "tile_km": 5,
-        "width_km": 30,
-        "height_km": 30,
-        "bbox_override": {
-            "lat_min": -32.95,
-            "lat_max": -32.75,
-            "lon_min": 151.70,
-            "lon_max": 151.90
-        }
-    },
-    "Wollongong": {
-        "tile_km": 5,
-        "width_km": 30,
-        "height_km": 30,
-        "bbox_override": {
-            "lat_min": -34.60,
-            "lat_max": -34.30,
-            "lon_min": 150.80,
-            "lon_max": 151.00
-        }
-    },
-    "Geelong": {
-        "tile_km": 5,
-        "width_km": 30,
-        "height_km": 30,
-        "bbox_override": {
-            "lat_min": -38.20,
-            "lat_max": -37.90,
-            "lon_min": 144.25,
-            "lon_max": 144.45
-        }
-    },
-    "Townsville": {
-        "tile_km": 5,
-        "width_km": 30,
-        "height_km": 30,
-        "bbox_override": {
-            "lat_min": -19.35,
-            "lat_max": -19.20,
-            "lon_min": 146.75,
-            "lon_max": 146.90
-        }
-    },
-    "Cairns": {
-        "tile_km": 5,
-        "width_km": 30,
-        "height_km": 30,
-        "bbox_override": {
-            "lat_min": -17.05,
-            "lat_max": -16.85,
-            "lon_min": 145.60,
-            "lon_max": 145.90
-        }
-    },
-    "Toowoomba": {
-        "tile_km": 5,
-        "width_km": 25,
-        "height_km": 25,
-        "bbox_override": {
-            "lat_min": -27.62,
-            "lat_max": -27.48,
-            "lon_min": 151.85,
-            "lon_max": 152.03
-        }
-    },
-    "Launceston": {
-        "tile_km": 5,
-        "width_km": 25,
-        "height_km": 25,
-        "bbox_override": {
-            "lat_min": -41.48,
-            "lat_max": -41.35,
-            "lon_min": 147.05,
-            "lon_max": 147.20
-        }
-    },
-    "Ballarat": {
-        "tile_km": 5,
-        "width_km": 25,
-        "height_km": 25,
-        "bbox_override": {
-            "lat_min": -37.60,
-            "lat_max": -37.50,
-            "lon_min": 143.80,
-            "lon_max": 143.95
-        }
-    },
-    "Bendigo": {
-        "tile_km": 5,
-        "width_km": 25,
-        "height_km": 25,
-        "bbox_override": {
-            "lat_min": -36.82,
-            "lat_max": -36.70,
-            "lon_min": 144.23,
-            "lon_max": 144.35
-        }
-    },
-    "Rockhampton": {
-        "tile_km": 5,
-        "width_km": 25,
-        "height_km": 25,
-        "bbox_override": {
-            "lat_min": -23.42,
-            "lat_max": -23.30,
-            "lon_min": 150.48,
-            "lon_max": 150.60
-        }
-    },
-    "Mackay": {
-        "tile_km": 5,
-        "width_km": 25,
-        "height_km": 25,
-        "bbox_override": {
-            "lat_min": -21.20,
-            "lat_max": -21.05,
-            "lon_min": 149.15,
-            "lon_max": 149.30
-        }
-    },
-    "Shepparton": {
-        "tile_km": 5,
-        "width_km": 25,
-        "height_km": 25,
-        "bbox_override": {
-            "lat_min": -36.42,
-            "lat_max": -36.30,
-            "lon_min": 145.38,
-            "lon_max": 145.50
-        }
-    },
-    "Mildura": {
-        "tile_km": 5,
-        "width_km": 25,
-        "height_km": 25,
-        "bbox_override": {
-            "lat_min": -34.35,
-            "lat_max": -34.15,
-            "lon_min": 142.00,
-            "lon_max": 142.30
-        }
-    },
-    "Wagga Wagga": {
-        "tile_km": 5,
-        "width_km": 25,
-        "height_km": 25,
-        "bbox_override": {
-            "lat_min": -35.25,
-            "lat_max": -35.05,
-            "lon_min": 147.22,
-            "lon_max": 147.45
-        }
-    },
+# --- STATE CODES ---
+AUSTRALIAN_STATES = [
+    "New South Wales",
+    "Victoria",
+    "Queensland",
+    "South Australia",
+    "Western Australia",
+    "Tasmania",
+    "Northern Territory",
+    "Australian Capital Territory",
+]
 
-    # === Small & Remote Towns ===
-    "Albany": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -35.05,
-            "lat_max": -34.85,
-            "lon_min": 117.82,
-            "lon_max": 118.05
-        }
-    },
-    "Broome": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -17.99,
-            "lat_max": -17.85,
-            "lon_min": 122.15,
-            "lon_max": 122.30
-        }
-    },
-    "Burnie": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -41.20,
-            "lat_max": -41.00,
-            "lon_min": 145.85,
-            "lon_max": 146.10
-        }
-    },
-    "Bundaberg": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -24.95,
-            "lat_max": -24.75,
-            "lon_min": 152.28,
-            "lon_max": 152.55
-        }
-    },
-    "Hervey Bay": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -25.40,
-            "lat_max": -25.20,
-            "lon_min": 152.75,
-            "lon_max": 153.00
-        }
-    },
-    "Mount Gambier": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -37.85,
-            "lat_max": -37.60,
-            "lon_min": 140.75,
-            "lon_max": 141.00
-        }
-    },
-    "Whyalla": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -33.07,
-            "lat_max": -32.90,
-            "lon_min": 137.50,
-            "lon_max": 137.75
-        }
-    },
-    "Port Lincoln": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -34.75,
-            "lat_max": -34.55,
-            "lon_min": 135.85,
-            "lon_max": 136.10
-        }
-    },
-    "Port Pirie": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -33.25,
-            "lat_max": -33.05,
-            "lon_min": 138.05,
-            "lon_max": 138.30
-        }
-    },
-    "Murray Bridge": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -35.25,
-            "lat_max": -35.05,
-            "lon_min": 139.20,
-            "lon_max": 139.45
-        }
-    },
-    "Gawler": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -34.63,
-            "lat_max": -34.52,
-            "lon_min": 138.70,
-            "lon_max": 138.85
-        }
-    },
-    "Devonport": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -41.18,
-            "lat_max": -41.00,
-            "lon_min": 146.35,
-            "lon_max": 146.60
-        }
-    },
-    "Albury": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -36.13,
-            "lat_max": -36.00,
-            "lon_min": 146.85,
-            "lon_max": 147.00
-        }
-    },
-    "Maitland": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -32.78,
-            "lat_max": -32.68,
-            "lon_min": 151.50,
-            "lon_max": 151.65
-        }
-    },
-    "Tamworth": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -31.12,
-            "lat_max": -31.00,
-            "lon_min": 150.83,
-            "lon_max": 150.99
-        }
-    },
-    "Port Macquarie": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -31.45,
-            "lat_max": -31.25,
-            "lon_min": 152.80,
-            "lon_max": 153.05
-        }
-    },
-    "Coffs Harbour": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -30.32,
-            "lat_max": -30.18,
-            "lon_min": 153.05,
-            "lon_max": 153.20
-        }
-    },
-    "Kalgoorlie": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -30.82,
-            "lat_max": -30.65,
-            "lon_min": 121.40,
-            "lon_max": 121.60
-        }
-    },
-    "Geraldton": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -28.85,
-            "lat_max": -28.65,
-            "lon_min": 114.55,
-            "lon_max": 114.75
-        }
-    },
-    "Fremantle": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -32.10,
-            "lat_max": -31.90,
-            "lon_min": 115.68,
-            "lon_max": 115.88
-        }
-    },
-    "Alice Springs": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -23.75,
-            "lat_max": -23.60,
-            "lon_min": 133.80,
-            "lon_max": 133.95
-        }
-    },
-    "Darwin": {
-        "tile_km": 5,
-        "width_km": 25,
-        "height_km": 25,
-        "bbox_override": {
-            "lat_min": -12.60,
-            "lat_max": -12.30,
-            "lon_min": 130.75,
-            "lon_max": 131.10
-        }
-    },
-    "Palmerston": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -12.52,
-            "lat_max": -12.40,
-            "lon_min": 130.95,
-            "lon_max": 131.12
-        }
-    },
-    "Katherine": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -14.55,
-            "lat_max": -14.35,
-            "lon_min": 132.20,
-            "lon_max": 132.45
-        }
-    },
-    "Belconnen": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -35.30,
-            "lat_max": -35.20,
-            "lon_min": 149.02,
-            "lon_max": 149.10
-        }
-    },
-    "Gungahlin": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -35.22,
-            "lat_max": -35.14,
-            "lon_min": 149.10,
-            "lon_max": 149.18
-        }
-    },
-    "Tuggeranong": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20,
-        "bbox_override": {
-            "lat_min": -35.45,
-            "lat_max": -35.30,
-            "lon_min": 149.02,
-            "lon_max": 149.15
-        }
-    },
-    "Warrnambool": {
-    "tile_km": 5,
-    "width_km": 25,
-    "height_km": 20,
-    "bbox_override": {
-        "lat_min": -38.4600,
-        "lat_max": -38.3300,
-        "lon_min": 142.4200,
-        "lon_max": 142.6700
-        }
-    },
-    "Traralgon": {
-    "tile_km": 5,
-    "width_km": 20,
-    "height_km": 15,
-    "bbox_override": {
-        "lat_min": -38.2400,
-        "lat_max": -38.1200,
-        "lon_min": 146.4700,
-        "lon_max": 146.6100
-        }
-    },
-    "Bunbury": {
-    "tile_km": 5,
-    "width_km": 20,
-    "height_km": 30,
-    "bbox_override": {
-        "lat_min": -33.4400,
-        "lat_max": -33.2500,
-        "lon_min": 115.5700,
-        "lon_max": 115.7200
-        }
-    },
+# --- GEOJSON PROPERTY KEYS ---
+GEO_KEY_REGION_NAME = "SA2_NAME21"
+GEO_KEY_REGION_CODE = "SA2_CODE21"
+GEO_KEY_SQKM = "AREASQKM"
 
-    # === Fallback ===
-    "default": {
-        "tile_km": 5,
-        "width_km": 20,
-        "height_km": 20
-    }
+# --- TILE SIZE RULES ---
+DEFAULT_TILE_SIZE_KM = 10
+MINIMUM_TILE_SIZE_KM = 5
+
+# GCCSA regions used for larger area crawls
+# These are larger metropolitan areas that can be crawled as single units
+
+GCCSA_REGIONS = {
+    "New South Wales": [
+        "Greater Sydney",
+        "Rest of NSW"
+    ],
+    "Victoria": [
+        "Greater Melbourne",
+        "Rest of Vic."
+    ],
+    "Queensland": [
+        "Greater Brisbane",
+        "Rest of Qld"
+    ],
+    "South Australia": [
+        "Greater Adelaide",
+        "Rest of SA"
+    ],
+    "Western Australia": [
+        "Greater Perth",
+        "Rest of WA"
+    ],
+    "Tasmania": [
+        "Greater Hobart",
+        "Rest of Tas."
+    ],
+    "Northern Territory": [
+        "Greater Darwin",
+        "Rest of NT"
+    ],
+    "Australian Capital Territory": [
+        "Australian Capital Territory"
+    ],
+    "Other Territories": [
+        "Other Territories"
+    ]
 }
+
+
+# Tile sizing strategy based on area in square kilometers
+# Ensures very small cities get full coverage with 5km tiles
+# General urban/suburban: 10km, Larger rural: 20-30km
+TILE_SIZE_OVERRIDES = [
+    (0, 3, 5),        # Very small areas — single 5 km tile covers entire region
+    (3, 1000, 10),    # Typical towns, suburbs, GCCSA urban areas
+    (1000, 5000, 20), # Large rural or regional zones
+    (5000, float("inf"), 30)  # Outback/very large unstructured areas
+]
+
+# Region descriptors used to influence tile sizing (NOT to exclude)
+# These suggest sparse population/business density — use larger tiles
+LOW_DENSITY_REGION_KEYWORDS = [
+    "offshore", "no usual address", "outside", "unknown",
+    "desert", "national park", "forest", "reserve", "unincorporated",
+    "military", "training area", "wilderness", "nature refuge",
+    "conservation area", "indigenous protected area", "biosphere"
+]
+
+# --- DEFAULT TILE CONFIGURATION FOR REGION CRAWLER ---
+# Main crawling will use regions.geojson for full coverage of all populated locations
+PRIMARY_GEOJSON_SOURCE = REGIONS_PATH
+
 
 
 # Google Places API endpoints

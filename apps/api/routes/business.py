@@ -1,8 +1,9 @@
+import json
 from fastapi import APIRouter, Query
 from services.google_maps import GoogleMapsService
 from services.business_manager import BusinessManager
-from config.constants import REGION_COORDINATES, AU_REGIONS, BUSINESS_CATEGORIES, ALL_BUSINESS_TYPES
-from utils.helpers import generate_tiles_for_region_unified
+from config.constants import REGION_COORDINATES, AU_REGIONS, BUSINESS_CATEGORIES, ALL_BUSINESS_TYPES, GCCSA_REGIONS, REGIONS_PATH, GEO_KEY_REGION_NAME
+from utils.helpers import generate_tiles_for_australia
 from typing import List, Optional
 from collections import defaultdict
 from db.mongo import leads_collection, db
@@ -203,22 +204,40 @@ async def crawl_text_search_custom_route(
 async def crawl_text_search_full_route(dry_run: bool = False, limit_tiles: int = 0):
     """
     Automatically crawl all business types across AU using Text Search API.
-    Dynamically generates tiles per region.
+    Dynamically generates tiles per region using GCCSA -> Sub-region model.
     If dry_run=True, simulates crawl without API or DB requests.
     """
     all_types = ALL_BUSINESS_TYPES
-    # print("Running automated text search for types:", all_types)
     all_tiles = []
-    for state, regions in AU_REGIONS.items():
-        for region in regions:
-            region_tiles = generate_tiles_for_region_unified(state, region)
-            all_tiles.extend(region_tiles)
 
-        if limit_tiles > 0:
-            all_tiles = all_tiles[:limit_tiles]
-    
-    # print(f"Generated unified tiles: {len(all_tiles)} across {len(AU_REGIONS)} states.")
+    # Load regions.geojson file
+    try:
+        regions_geojson = REGIONS_PATH
+        with open(regions_geojson, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        raise RuntimeError(f"Failed to load GeoJSON file at {regions_geojson}: {str(e)}")
 
+    # Dynamic tile generation by state and GCCSA region
+    for state_name, gccsa_list in GCCSA_REGIONS.items():
+        for gccsa_region in gccsa_list:
+            matching_regions = [
+                feature for feature in regions_geojson["features"]
+                if feature["properties"].get("STE_NAME21") == state_name and
+                   feature["properties"].get("GCC_NAME21") == gccsa_region
+            ]
+            for feature in matching_regions:
+                region_name = feature["properties"].get("SA2_NAME21")
+                if region_name:
+                    try:
+                        tiles = generate_tiles_for_australia(region_name)
+                        all_tiles.extend(tiles)
+                    except Exception as gen_err:
+                        print(f"[TileGen ERROR] {region_name}: {gen_err}")
+
+    # Apply limit if specified
+    if limit_tiles > 0:
+        all_tiles = all_tiles[:limit_tiles]
 
     if not all_tiles:
         return {"error": "No dynamic tiles could be generated."}
@@ -233,17 +252,21 @@ async def crawl_text_search_full_route(dry_run: bool = False, limit_tiles: int =
         for btype in all_types:
             result = await business_manager.crawl_using_text_search(btype, all_tiles, dry_run=True)
             simulated_calls.extend(result.get("details", []))
+            all_failures.extend(result.get("failures", []))  # Still collect failures if any
+            all_details.extend(result.get("details", []))
 
         return {
             "message": "✅ DRY RUN: Simulation completed",
             "total_business_types": len(all_types),
             "total_tiles": len(all_tiles),
             "total_simulated_requests": len(simulated_calls),
-            "planned_requests": simulated_calls[:10],  # preview first 10
+            "planned_requests": simulated_calls[:10],
+            "failures": all_failures,
+            "details": all_details,
             "note": "No actual API or DB operations were performed."
         }
 
-    # Real crawl
+    # Real crawl execution
     for btype in all_types:
         print(f"Real crawl: {btype}")
         result = await business_manager.crawl_using_text_search(btype, all_tiles, dry_run=False)
@@ -253,12 +276,13 @@ async def crawl_text_search_full_route(dry_run: bool = False, limit_tiles: int =
         all_details.extend(result.get("details", []))
 
     return {
-        "message": "Full AU-wide text search crawl completed.",
+        "message": "✅ Full AU-wide text search crawl completed.",
         "total_saved": total_saved,
         "tiles_scanned": total_tiles,
         "failures": all_failures,
         "details": all_details
     }
+
 
 
 @router.get("/leads/crawl/textsearch/coverage")
