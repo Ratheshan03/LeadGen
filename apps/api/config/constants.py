@@ -93,7 +93,6 @@ BUSINESS_CATEGORIES = {
     ],
     "Lodging": [
         "hotel",
-        "bed_and_breakfast",
         "motel",
         "hostel",
         "campground",

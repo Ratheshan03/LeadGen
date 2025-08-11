@@ -1,6 +1,9 @@
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from typing import Optional, Dict, Any, List
 from bson.objectid import ObjectId
+import os
+import pandas as pd
+from datetime import datetime
 
 # Check if a business already exists using place_id
 async def is_duplicate(db: AsyncIOMotorDatabase, place_id: str) -> bool:
@@ -65,3 +68,51 @@ async def get_lead_by_place_id(db: AsyncIOMotorDatabase, place_id: str):
 # Delete a lead by ObjectId (if needed for dashboard cleanup)
 async def delete_lead_by_id(db: AsyncIOMotorDatabase, lead_id: str):
     return await db.leads.delete_one({"_id": ObjectId(lead_id)})
+
+
+# Export data to Excel
+def export_to_excel(data: list, region: str, state: str, business_type: str = "ALL"):
+    if not data:
+        print("📭 No data to export to Excel.")
+        return None
+
+    # Sanitize strings for filenames
+    safe_query = business_type.replace(" ", "_").lower()
+    safe_region = region.replace(" ", "_").lower()
+    safe_state = state.replace(" ", "_").lower()
+
+    # Create filename with timestamp
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"TextSearch_{safe_query}_{safe_region}_{safe_state}_{timestamp}.xlsx"
+    output_dir = "output_maps"
+    os.makedirs(output_dir, exist_ok=True)
+    filepath = os.path.join(output_dir, filename)
+
+    # Flatten and normalize data for Excel
+    cleaned_data = []
+    for entry in data:
+        location = entry.get("location", {})
+        cleaned_data.append({
+            "Place ID": entry.get("place_id"),
+            "Name": entry.get("name"),
+            "Address": entry.get("address"),
+            "Phone": entry.get("phone"),
+            "Website": entry.get("website"),
+            "Latitude": location.get("lat"),
+            "Longitude": location.get("lng"),
+            "Tags": ", ".join(entry.get("tags", [])),
+            "Rating": entry.get("rating"),
+            "Reviews": entry.get("total_reviews"),
+            "Opening Hours": "\n".join(entry.get("opening_hours", [])),
+            "State": entry.get("state"),
+            "Region": entry.get("region"),
+            "Business Type": entry.get("business_type"),
+            "Crawl Category": entry.get("category"),
+        })
+
+    # Save to Excel
+    df = pd.DataFrame(cleaned_data)
+    df.to_excel(filepath, index=False, engine="openpyxl")
+
+    print(f"📄 Excel export complete: {filepath}")
+    return filepath

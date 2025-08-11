@@ -36,75 +36,13 @@ def km_to_lat_lon_deltas(km: float):
     return km / 111, km / 111  # ~111 km per degree latitude/longitude
 
 
-# def generate_text_search_tiles_unified(tile_km=5):
-#     """
-#     Uses the unified REGION_TILE_CONFIGS to generate tile boundaries for all regions.
-#     Useful for text search with proper bounding boxes.
-
-#     Returns:
-#         List[Dict]: All region tiles (used for crawling).
-#     """
-#     tiles = []
-
-#     region_to_state = {
-#         region: state
-#         for state, regions in AU_REGIONS.items()
-#         for region in regions
-#     }
-
-#     for region, center_str in REGION_COORDINATES.items():
-#         state = region_to_state.get(region, "UNKNOWN")
-#         lat_center, lon_center = map(float, center_str.split(","))
-
-#         tile_config = REGION_TILE_CONFIGS.get(region, REGION_TILE_CONFIGS["default"])
-#         tile_km = tile_config["tile_km"]
-#         delta_lat, delta_lon = km_to_lat_lon_deltas(tile_km)
-
-#         if "bbox_override" in tile_config:
-#             lat_min = tile_config["bbox_override"]["lat_min"]
-#             lat_max = tile_config["bbox_override"]["lat_max"]
-#             lon_min = tile_config["bbox_override"]["lon_min"]
-#             lon_max = tile_config["bbox_override"]["lon_max"]
-#         else:
-#             width_km = tile_config["width_km"]
-#             height_km = tile_config["height_km"]
-#             lat_range = height_km / 2 / 111
-#             lon_range = width_km / 2 / 111
-#             lat_min = lat_center - lat_range
-#             lat_max = lat_center + lat_range
-#             lon_min = lon_center - lon_range
-#             lon_max = lon_center + lon_range
-
-#         rows = math.ceil((lat_max - lat_min) / delta_lat)
-#         cols = math.ceil((lon_max - lon_min) / delta_lon)
-
-#         for i in range(rows):
-#             for j in range(cols):
-#                 lat_low = lat_min + i * delta_lat
-#                 lat_high = lat_low + delta_lat
-#                 lon_low = lon_min + j * delta_lon
-#                 lon_high = lon_low + delta_lon
-
-#                 tiles.append({
-#                     "region": region,
-#                     "state": state,
-#                     "tile_name": f"{region.replace(' ', '_')}_r{i+1}_c{j+1}",
-#                     "low": {"latitude": round(lat_low, 6), "longitude": round(lon_low, 6)},
-#                     "high": {"latitude": round(lat_high, 6), "longitude": round(lon_high, 6)},
-#                 })
-
-#     print(f"✅ Total unified search tiles generated: {len(tiles)}")
-#     return tiles
-
-
-
-
 # Tile Generation for all regions using GeoJSON files
 
 def generate_tiles_for_australia(
     tile_km: float = 10.0,
     geojson_source: str = "regions",
-    target_region: str = None
+    target_region: str = None,
+    state_name: str = None
 ):
 
     print(f"\n\U0001F4C2 Loading GeoJSON data: {geojson_source} ...")
@@ -129,7 +67,12 @@ def generate_tiles_for_australia(
         "regions": "SA2_NAME21"
     }[geojson_source]
 
-    region_area_key = "AREASQKM21"
+    region_area_key = {
+    "gccsa": "AREASQKM21",
+    "lga": "AREASQKM",
+    "regions": "AREASQKM21"
+    }[geojson_source]
+
 
     print("\U0001F50D Building geometry maps...")
     for feature in region_data["features"]:
@@ -146,9 +89,15 @@ def generate_tiles_for_australia(
 
     all_tiles = []
 
-    def determine_tile_size(region_name, metadata):
+    def determine_tile_size(region_name, metadata, geojson_source="regions"):
         name = region_name.lower()
-        area = metadata.get("AREASQKM21", 0)
+
+        # Choose correct area key based on geojson_source
+        area_key = "AREASQKM21"
+        if geojson_source == "lga":
+            area_key = "AREASQKM"
+        
+        area = metadata.get(area_key, 0)
         gcc_name = metadata.get("GCC_NAME21", "").lower()
         sa4_name = metadata.get("SA4_NAME21", "").lower()
 
@@ -199,6 +148,7 @@ def generate_tiles_for_australia(
                         unique_tiles_set.add(tile_key)
                         region_tiles.append({
                             "region": region_name,
+                            "state": state_name,
                             "source": geojson_source,
                             "tile_name": f"{region_name.replace(' ', '_')}_r{row}_c{col}",
                             "low": {"latitude": round(lat_min, 6), "longitude": round(lon_min, 6)},
@@ -239,7 +189,7 @@ def generate_tiles_for_australia(
                     print(f"   • {name}")
             return []
 
-        tile_km_override = determine_tile_size(region_key, region_metadata_map.get(region_key, {}))
+        tile_km_override = determine_tile_size(region_key, region_metadata_map.get(region_key, {}), geojson_source=geojson_source)
         print(f"\n📏 Generating tiles for: {target_region} ({geojson_source.upper()}) with tile size {tile_km_override}km...")
         try:
             region_tiles = generate_tiles_for_geom(region_key, target_geom, tile_km_override)
@@ -249,6 +199,7 @@ def generate_tiles_for_australia(
             print(f"❌ Error generating tiles for {target_region}: {e}")
         return all_tiles
 
+    # All regions in the GeoJSON
     print(f"\n📍 No specific region provided. Generating tiles for all regions in: {geojson_source.upper()}")
     for region_name, region_geom in tqdm(region_geom_map.items(), desc="\U0001F9F1 Generating tiles"):
         print(f"\n🔎 Processing: {region_name} ...")

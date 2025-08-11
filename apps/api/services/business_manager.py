@@ -1,5 +1,5 @@
 from db.mongo import db
-from db.queries import is_duplicate, insert_lead, insert_leads_batch
+from db.queries import is_duplicate, insert_lead, insert_leads_batch, export_to_excel
 from utils.helpers import transform_place_result, generate_tiles_for_australia
 from services.google_maps import GoogleMapsService
 
@@ -142,11 +142,15 @@ class BusinessManager:
         }
 
         
-    async def crawl_custom_text_search(self, query: str, state: str, region: str, dry_run: bool = False):
+    async def crawl_custom_text_search(
+        self,
+        query: str,
+        state: str,
+        region: str,
+        tiles: list,
+        dry_run: bool = False
+    ):
         maps_service = GoogleMapsService()
-        
-        # Use the new unified tile generator
-        tiles = generate_tiles_for_australia(state, region)
 
         if not tiles:
             return {"error": f"No tiles found for region {region}, state {state}"}
@@ -183,6 +187,8 @@ class BusinessManager:
 
             try:
                 print(f"\n📍 Custom Tile: {tile.get('region')} ({tile.get('state')}), Query: '{query}'")
+
+                full_text_query = f"{query} in {region}, {state}, Australia"
 
                 result_data = maps_service.text_search_places(
                     text_query=query,
@@ -242,5 +248,6 @@ class BusinessManager:
             "tiles_scanned": len(tiles),
             "failures": failures,
             "details": detailed_results,
-            "sample_results": cleaned_samples
+            "sample_results": cleaned_samples,
+            "saved_data": saved_data
         }

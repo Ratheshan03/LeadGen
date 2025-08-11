@@ -10,9 +10,9 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from helpers import generate_tiles_for_australia
 from visualization import visualize_tiles_on_map, visualize_region_polygon
 
-BASE_URL = "http://localhost:8000"  # or wherever your FastAPI server runs
+BASE_URL = "http://localhost:8000" 
 
-def crawl_custom_text_search(query: str, state: str, region: str, dry_run=False):
+def crawl_custom_text_search(query: str, state: str, region: str, geojson_type: str, dry_run=False):
     """Call custom scoped text search API."""
     try:
         response = requests.get(
@@ -21,6 +21,7 @@ def crawl_custom_text_search(query: str, state: str, region: str, dry_run=False)
                 "query": query,
                 "state": state,
                 "region": region,
+                "geojson_type": geojson_type,
                 "dry_run": str(dry_run).lower()
             }
         )
@@ -28,8 +29,6 @@ def crawl_custom_text_search(query: str, state: str, region: str, dry_run=False)
         return response.json()
     except Exception as e:
         return {"error": f"Custom text search crawl failed: {str(e)}"}
-
-
 
 
 def get_polygon_from_geojson(region_name: str, geojson_type: str):
@@ -56,7 +55,7 @@ def get_polygon_from_geojson(region_name: str, geojson_type: str):
         elif geojson_type == "regions":
             name = props.get("SA2_NAME21", "").strip().lower()
         elif geojson_type == "lga":
-            name = props.get("LGA_NAME21", "").strip().lower()
+            name = props.get("LGA_NAME24", "").strip().lower()
         else:
             continue
 
@@ -72,8 +71,8 @@ if __name__ == "__main__":
     timestamp = datetime.now().strftime("%Y%m%d_%H%M")
 
     # Test parameters
-    region_name = "north melbourne"
-    geojson_type = "regions"
+    region_name = "Alpine"
+    geojson_type = "lga"  # Options: gccsa, regions, lga
     state_name = "Victoria"
     business_query = "ALL"
     dry_run = False
@@ -84,6 +83,7 @@ if __name__ == "__main__":
         tile_km=tile_km,
         geojson_source=geojson_type,
         target_region=region_name,
+        state_name=state_name
     )
 
     if not all_tiles:
@@ -107,6 +107,7 @@ if __name__ == "__main__":
         query=business_query,
         state=state_name,
         region=region_name,
+        geojson_type=geojson_type,
         dry_run=dry_run
     )
 

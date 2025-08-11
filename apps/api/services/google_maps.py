@@ -1,5 +1,7 @@
 import requests
 import time
+import json
+from shapely.geometry import box, Point
 from utils.api_key_manager import APIKeyManager
 from config.constants import (
     GOOGLE_PLACES_NEARBY_URL,
@@ -42,6 +44,7 @@ class GoogleMapsService:
 
         return payload
 
+    # Places Nearby Search API
     def search_places_nearby(self, location: str, place_type: str, radius: float = 5000.0):
         all_results = []
         next_page_token = None
@@ -74,6 +77,7 @@ class GoogleMapsService:
 
         return all_results
 
+    # Places Details API 
     def get_place_details(self, place_id: str):
         url = f"{GOOGLE_PLACE_DETAILS_URL}/{place_id}"
         headers = {
@@ -139,13 +143,15 @@ class GoogleMapsService:
         return results
 
 
+    # Text Search API
     def text_search_places(self, text_query: str, location_bias: dict = None, max_results: int = 20):
         headers = {
             "Content-Type": "application/json",
             "X-Goog-Api-Key": self.key_manager.get_key(),
             "X-Goog-FieldMask": (
-                "places.displayName,places.formattedAddress,places.websiteUri,"
-                "places.internationalPhoneNumber,places.types,places.rating,places.id"
+                "places.id,places.displayName,places.formattedAddress,places.websiteUri,"
+                "places.internationalPhoneNumber,places.types,places.rating,"
+                "places.location,places.googleMapsUri,nextPageToken"
             )
         }
 
@@ -153,51 +159,92 @@ class GoogleMapsService:
         page_token = None
         pages_fetched = 0
 
-        for _ in range(10):  # Max 10 pages, 200 results
-            #console out put for debugging whcih page count is being fetched with the query
-            print(f"Fetching page {pages_fetched + 1} for query: {text_query}")
-            if page_token:
-                payload = {"pageToken": page_token}
-            else:
-                payload = {
-                    "textQuery": text_query,
-                    "maxResultCount": max_results
-                }
+        # 🧠 Prepare base payload ONCE with initial params (for reuse)
+        base_payload = {
+            "textQuery": text_query,
+            "pageSize": max_results
+        }
+        if location_bias and "rectangle" in location_bias:
+            base_payload["locationRestriction"] = location_bias
+        else:
+            print("⚠️ No location bias provided. Skipping geo-filtering.")
 
-                # Defensive: ensure location_bias format is correct
-                if location_bias and "rectangle" in location_bias:
-                    payload["locationBias"] = location_bias
+        for _ in range(10):
+            if page_token:
+                payload = {**base_payload, "pageToken": page_token}
+                print(f"\n🔄 Fetching NEXT page {pages_fetched + 1} for '{text_query}'")
+            else:
+                payload = base_payload.copy()
+                if "locationBias" in payload:
+                    print(f"\n📍 First page search for '{text_query}' with location bias")
                 else:
-                    print("⚠️ Warning: No location bias applied or incorrect format. This may cause inaccurate results.")
+                    print(f"\n📍 First page search for '{text_query}' WITHOUT location bias")
+
+            # print(f"📦 Payload being sent: {json.dumps(payload)}")
 
             response = requests.post(GOOGLE_PLACES_TEXT_URL, json=payload, headers=headers)
             self.quota.increment()
 
             if response.status_code == 429:
-                print("Rate limit hit. Rotating API key...")
+                print("🚫 Rate limit hit. Rotating API key...")
                 self.key_manager.rotate_key()
-                time.sleep(1)
+                time.sleep(1.5)
                 continue
 
             if response.status_code != 200:
-                print(f"❌ Google Text Search API Error: {response.status_code}, {response.text}")
+                print(f"❌ Google API Error: {response.status_code} | {response.text}")
                 break
 
             data = response.json()
             results = data.get("places", [])
+            print(f"📊 Page {pages_fetched + 1} results: {len(results)} places found")
+            
+            # Get bounds from the rectangle
+            if location_bias and "rectangle" in location_bias:
+                low = location_bias["rectangle"]["low"]
+                high = location_bias["rectangle"]["high"]
+                bounds_polygon = box(low["longitude"], low["latitude"], high["longitude"], high["latitude"])
+
+                # Filter: keep only points strictly within the tile box
+                filtered_results = []
+                for place in results:
+                    loc = place.get("location", {})
+                    if not loc or "longitude" not in loc or "latitude" not in loc:
+                        print("⚠️ Skipping place: Missing or malformed location")
+                        continue
+                    if "longitude" in loc and "latitude" in loc:
+                        point = Point(loc["longitude"], loc["latitude"])
+                        if bounds_polygon.contains(point):
+                            filtered_results.append(place)
+
+            
+                print(f"🌐 Geo-filtered: {len(filtered_results)} / {len(results)} retained inside bounds")
+                results = filtered_results
+
+            else:
+                print("⚠️ No location bias provided. Skipping geo-filtering.")
+
+            token = data.get("nextPageToken")
+
+            print(f"✅ Page {pages_fetched + 1} fetched: {len(results)} filtered results")
+            # print(f"🔁 Next page token received: {token}")
+
             all_results.extend(results)
             pages_fetched += 1
 
-            page_token = data.get("nextPageToken")
-            if not page_token:
+            if not token:
+                print("⛔ No further pages.")
                 break
 
-            time.sleep(1.5)  # Google best practice
+            page_token = token
+            time.sleep(2.0)
+
+        unique_results = {place["id"]: place for place in all_results if "id" in place}
+
+        print(f"\n🎯 Done: {len(unique_results)} total unique places returned across {pages_fetched} pages.")
 
         return {
-            "results": all_results,
+            "results": list(unique_results.values()),
             "pages_fetched": pages_fetched,
-            "total_returned": len(all_results)
+            "total_returned": len(unique_results)
         }
-
-

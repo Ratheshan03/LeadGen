@@ -4,6 +4,7 @@ from services.google_maps import GoogleMapsService
 from services.business_manager import BusinessManager
 from config.constants import REGION_COORDINATES, AU_REGIONS, BUSINESS_CATEGORIES, ALL_BUSINESS_TYPES, GCCSA_REGIONS, REGIONS_PATH, GEO_KEY_REGION_NAME
 from utils.helpers import generate_tiles_for_australia
+from db.queries import export_to_excel
 from typing import List, Optional
 from collections import defaultdict
 from db.mongo import leads_collection, db
@@ -187,37 +188,82 @@ async def leads_summary(
 
 @router.get("/crawl/textsearch/custom")
 async def crawl_text_search_custom_route(
-    query: str = Query(..., description="Free-text query (e.g., 'plumber', 'accountants', or 'ALL')"),
+    query: str = Query(..., description="Business type or 'ALL'"),
     state: str = Query(..., description="Australian state"),
     region: str = Query(..., description="City or region within the state"),
+    geojson_type: str = Query("regions", description="GeoJSON source type: 'regions', 'gccsa', or 'lga'"),
     dry_run: bool = False
 ):
-    """
-    Custom text search for user-defined region + query.
-    If query='ALL', will iterate through all business types.
-    """
+    # 👣 Step 1: Generate tiles
+    tiles = generate_tiles_for_australia(
+        tile_km=10,
+        geojson_source=geojson_type,
+        target_region=region,
+        state_name=state
+    )
+
+    if not tiles:
+        return {
+            "error": f"No tiles generated for region '{region}' using geojson '{geojson_type}'."
+        }
+
+    # 👥 Handle ALL business types
     if query.upper() == "ALL":
         results = []
         failures = []
         details = []
+        combined_saved_data = []
 
         for btype in ALL_BUSINESS_TYPES:
-            result = await business_manager.crawl_custom_text_search(btype, state, region, dry_run)
-            results.append(result)
-            failures.extend(result.get("failures", []))
-            details.extend(result.get("details", []))
+            try:
+                print(f"🚀 Crawling for business type: {btype}")
+                result = await business_manager.crawl_custom_text_search(btype, state, region, tiles, dry_run)
+                results.append(result)
+                failures.extend(result.get("failures", []))
+                details.extend(result.get("details", []))
+                combined_saved_data.extend(result.get("saved_data", []))
+            except Exception as e:
+                print(f"❌ Error while crawling '{btype}': {str(e)}")
+                failures.append({"business_type": btype, "error": str(e)})
+
+        # Export to Excel
+        excel_path = export_to_excel(
+            data=combined_saved_data,
+            region=region,
+            state=state,
+            business_type="ALL"
+        )
 
         return {
             "message": f"✅ Crawled all business types in region: {region}, state: {state}",
-            "business_types": ALL_BUSINESS_TYPES,
+            "business_types": len(ALL_BUSINESS_TYPES),
             "dry_run": dry_run,
-            "failures": failures,
-            "details": details
+            "failures": len(failures),
+            "details": len(details),
+            "total_saved": len(combined_saved_data),
+            "excel_file": excel_path
         }
 
-    # Single business type
-    return await business_manager.crawl_custom_text_search(query, state, region, dry_run)
+    # 📌 Single business type
+    result = await business_manager.crawl_custom_text_search(query, state, region, tiles, dry_run)
 
+    # Export to Excel
+    excel_path = export_to_excel(
+        data=result.get("saved_data", []),
+        region=region,
+        state=state,
+        business_type=query
+    )
+
+    return {
+        "message": result.get("message"),
+        "dry_run": dry_run,
+        "failures": result.get("failures", []),
+        "details": result.get("details", []),
+        "total_saved": result.get("total_saved", 0),
+        "tiles_scanned": result.get("tiles_scanned", 0),
+        "excel_file": excel_path
+    }
 
 
 
@@ -251,7 +297,7 @@ async def crawl_text_search_full_route(dry_run: bool = False, limit_tiles: int =
                 region_name = feature["properties"].get("SA2_NAME21")
                 if region_name:
                     try:
-                        tiles = generate_tiles_for_australia(region_name)
+                        tiles = generate_tiles_for_australia(region_name, state_name)
                         all_tiles.extend(tiles)
                     except Exception as gen_err:
                         print(f"[TileGen ERROR] {region_name}: {gen_err}")
