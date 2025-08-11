@@ -20,6 +20,8 @@ pids
 dist/
 build/
 apps/api/dist/
+apps/api/data/geo_boundaries/
+apps/api/output_maps/
 apps/api/venv/
 apps/web/.next/
 apps/web/out/
