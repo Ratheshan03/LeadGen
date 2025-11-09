@@ -87,3 +87,6 @@ __pycache__/
 # Python virtual environments
 venv/
 .venv/
+
+# Large GeoJSON data files (use Git LFS if needed)
+apps/api/data/geojson/*.geojson
