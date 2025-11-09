@@ -453,4 +453,3 @@ async def check_coverage(state: Optional[str] = None, region: Optional[str] = No
         "state": state or "All States",
         "total_leads": count
     }
-

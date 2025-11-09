@@ -395,3 +395,4 @@ PRIMARY_GEOJSON_SOURCE = REGIONS_PATH
 GOOGLE_PLACES_NEARBY_URL = "https://places.googleapis.com/v1/places:searchNearby"
 GOOGLE_PLACES_TEXT_URL = "https://places.googleapis.com/v1/places:searchText"
 GOOGLE_PLACE_DETAILS_URL = "https://places.googleapis.com/v1/places"
+

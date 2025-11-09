@@ -136,3 +136,4 @@ def visualize_multiple_tiles(tiles, save_path="all_tiles_map.html", zoom=5, colo
 
     m.save(save_path)
     print(f"✅ Combined tiles map saved to: {save_path}")
+

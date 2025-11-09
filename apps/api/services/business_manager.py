@@ -257,3 +257,5 @@ class BusinessManager:
             "saved_data": saved_data,
             "api_requests_total": api_requests_total  # ✅ aggregate
         }
+
+
