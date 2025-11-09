@@ -52,7 +52,6 @@ BUSINESS_CATEGORIES = {
     ],
     "Finance": [
         "bank",
-        "atm",
         "accounting",
     ],
     "Food and Drink": [
@@ -340,28 +339,56 @@ GCCSA_REGIONS = {
 
 
 # Tile sizing strategy based on area in square kilometers
-# Ensures very small cities get full coverage with 5km tiles
-# General urban/suburban: 10km, Larger rural: 20-30km
+# More granular ranges for robust coverage:
+# - Very small towns/cities still get fine tiles
+# - Larger rural regions get progressively bigger tiles to reduce tile counts
 TILE_SIZE_OVERRIDES = [
-    (0, 3, 5),        # Very small areas — single 5 km tile covers entire region
-    (3, 1000, 10),    # Typical towns, suburbs, GCCSA urban areas
-    (1000, 5000, 20), # Large rural or regional zones
-    (5000, float("inf"), 30)  # Outback/very large unstructured areas
+    (0, 3, 5),          # Tiny regions (<3 km²) → fine detail with 5 km tiles
+    (3, 50, 10),        # Small towns/communities (<50 km²) → 10 km tiles
+    (50, 100, 15),      # Suburban or mid-size towns (<100 km²) → 15 km tiles
+    (100, 500, 20),     # Small rural or mixed areas (<500 km²) → 20 km tiles
+    (500, 1000, 25),    # Larger rural areas (<1000 km²) → 25 km tiles
+    (1000, 2000, 50),   # Very large rural areas (<2000 km²) → 50 km tiles
+    (2000, 5000, 70),   # Huge districts/regions (<5000 km²) → 70 km tiles
+    (5000, 10000, 100),  # Vast territories (<10,000 km²) → 100 km tiles
+    (10000, float("inf"), 150)  # Extremely large (state-scale deserts/outback) → 150 km tiles
 ]
+
 
 # Region descriptors used to influence tile sizing (NOT to exclude)
 # These suggest sparse population/business density — use larger tiles
 LOW_DENSITY_REGION_KEYWORDS = [
-    "offshore", "no usual address", "outside", "unknown",
-    "desert", "national park", "forest", "reserve", "unincorporated",
-    "military", "training area", "wilderness", "nature refuge",
-    "conservation area", "indigenous protected area", "biosphere"
+    # Offshore / external
+    "offshore", "island", "islands", "external territory", "cocos", "keeling",
+    "norfolk", "christmas island", "torres strait", "ashmore", "cartier",
+
+    # Address / population unknown
+    "no usual address", "outside", "unknown", "undefined",
+
+    # Natural reserves & protected
+    "desert", "national park", "forest", "reserve", "state park", "wilderness",
+    "nature refuge", "conservation area", "biosphere", "heritage area",
+    "protected area", "marine park", "wildlife sanctuary", "botanic garden",
+
+    # Rural / low-density descriptors
+    "pastoral", "grazing", "agricultural", "rural", "farm", "station",
+    "bushland", "scrub", "grassland", "vineyard", "orchard",
+
+    # Water / coastal
+    "lake", "river", "wetland", "swamp", "lagoon", "coastal", "mangrove", "shoal", "reef",
+
+    # Administrative sparse areas
+    "unincorporated", "shire", "county", "region", "district",
+
+    # Military / restricted zones
+    "military", "training area", "weapons range", "bombing range", "air force base",
+    "naval base", "army base"
 ]
+
 
 # --- DEFAULT TILE CONFIGURATION FOR REGION CRAWLER ---
 # Main crawling will use regions.geojson for full coverage of all populated locations
 PRIMARY_GEOJSON_SOURCE = REGIONS_PATH
-
 
 
 # Google Places API endpoints

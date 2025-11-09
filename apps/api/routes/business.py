@@ -2,7 +2,7 @@ import json
 from fastapi import APIRouter, Query
 from services.google_maps import GoogleMapsService
 from services.business_manager import BusinessManager
-from config.constants import REGION_COORDINATES, AU_REGIONS, BUSINESS_CATEGORIES, ALL_BUSINESS_TYPES, GCCSA_REGIONS, REGIONS_PATH, GEO_KEY_REGION_NAME
+from config.constants import REGION_COORDINATES, AU_REGIONS, BUSINESS_CATEGORIES, ALL_BUSINESS_TYPES, GCCSA_REGIONS, REGIONS_PATH, GEO_KEY_REGION_NAME, GCCSA_PATH, LGA_PATH
 from utils.helpers import generate_tiles_for_australia
 from db.queries import export_to_excel
 from typing import List, Optional
@@ -185,7 +185,6 @@ async def leads_summary(
     }
 
 
-
 @router.get("/crawl/textsearch/custom")
 async def crawl_text_search_custom_route(
     query: str = Query(..., description="Business type or 'ALL'"),
@@ -194,7 +193,7 @@ async def crawl_text_search_custom_route(
     geojson_type: str = Query("regions", description="GeoJSON source type: 'regions', 'gccsa', or 'lga'"),
     dry_run: bool = False
 ):
-    # 👣 Step 1: Generate tiles
+    # Generate tiles
     tiles = generate_tiles_for_australia(
         tile_km=10,
         geojson_source=geojson_type,
@@ -207,26 +206,38 @@ async def crawl_text_search_custom_route(
             "error": f"No tiles generated for region '{region}' using geojson '{geojson_type}'."
         }
 
-    # 👥 Handle ALL business types
+    if dry_run:
+        return {
+            "message": f"🟢 Dry run: Tiles generated for region '{region}', state '{state}'",
+            "tiles_generated": len(tiles),
+            "tiles": tiles,
+            "dry_run": True,
+            "api_requests_total": 0
+        }
+
+    # Handle ALL business types
     if query.upper() == "ALL":
         results = []
         failures = []
         details = []
         combined_saved_data = []
+        api_requests_grand_total = 0
 
         for btype in ALL_BUSINESS_TYPES:
             try:
                 print(f"🚀 Crawling for business type: {btype}")
-                result = await business_manager.crawl_custom_text_search(btype, state, region, tiles, dry_run)
+                result = await business_manager.crawl_custom_text_search(
+                    btype, state, region, tiles, dry_run
+                )
                 results.append(result)
                 failures.extend(result.get("failures", []))
                 details.extend(result.get("details", []))
                 combined_saved_data.extend(result.get("saved_data", []))
+                api_requests_grand_total += result.get("api_requests_total", 0)
             except Exception as e:
                 print(f"❌ Error while crawling '{btype}': {str(e)}")
                 failures.append({"business_type": btype, "error": str(e)})
 
-        # Export to Excel
         excel_path = export_to_excel(
             data=combined_saved_data,
             region=region,
@@ -241,13 +252,15 @@ async def crawl_text_search_custom_route(
             "failures": len(failures),
             "details": len(details),
             "total_saved": len(combined_saved_data),
-            "excel_file": excel_path
+            "tiles_generated": len(tiles),
+            "tiles": tiles,
+            "excel_file": excel_path,
+            "api_requests_total": api_requests_grand_total  # ✅ surfaced
         }
 
-    # 📌 Single business type
+    # Single business type
     result = await business_manager.crawl_custom_text_search(query, state, region, tiles, dry_run)
 
-    # Export to Excel
     excel_path = export_to_excel(
         data=result.get("saved_data", []),
         region=region,
@@ -262,52 +275,123 @@ async def crawl_text_search_custom_route(
         "details": result.get("details", []),
         "total_saved": result.get("total_saved", 0),
         "tiles_scanned": result.get("tiles_scanned", 0),
-        "excel_file": excel_path
+        "tiles_generated": len(tiles),
+        "tiles": tiles,
+        "excel_file": excel_path,
+        "api_requests_total": result.get("api_requests_total", 0)
     }
 
 
 
+
 @router.get("/crawl/textsearch/full")
-async def crawl_text_search_full_route(dry_run: bool = False, limit_tiles: int = 0):
+async def crawl_text_search_full_route(
+    dry_run: bool = False,
+    limit_tiles: int = 0,
+    geojson_type: str = Query("gccsa", description="GeoJSON source: 'gccsa', 'regions', or 'lga'")
+):
     """
-    Automatically crawl all business types across AU using Text Search API.
-    Dynamically generates tiles per region using GCCSA -> Sub-region model.
-    If dry_run=True, simulates crawl without API or DB requests.
+    Crawl all business types across AU using text search.
+    Supports tile generation from gccsa, regions, or lga GeoJSON files.
     """
+
+    geojson_type = geojson_type.lower()
+    if geojson_type not in {"gccsa", "regions", "lga"}:
+        return {"error": "Invalid geojson_type. Must be one of 'gccsa', 'regions', or 'lga'."}
+
     all_types = ALL_BUSINESS_TYPES
     all_tiles = []
 
-    # Load regions.geojson file
-    regions_geojson = None
-    try:
-        with open(REGIONS_PATH, "r", encoding="utf-8") as f:
-            regions_geojson = json.load(f)
-    except Exception as e:
-        raise RuntimeError(f"Failed to load GeoJSON file at {REGIONS_PATH}: {str(e)}")
+    # Map geojson type to path
+    geojson_path_map = {
+        "gccsa": GCCSA_PATH,
+        "regions": REGIONS_PATH,
+        "lga": LGA_PATH
+    }
+    geojson_path = geojson_path_map[geojson_type]
 
-    # Dynamic tile generation by state and GCCSA region
-    for state_name, gccsa_list in GCCSA_REGIONS.items():
-        for gccsa_region in gccsa_list:
-            matching_regions = [
-                feature for feature in regions_geojson["features"]
-                if feature["properties"].get("STE_NAME21") == state_name and
-                   feature["properties"].get("GCC_NAME21") == gccsa_region
+    # Load geojson file
+    try:
+        with open(geojson_path, "r", encoding="utf-8") as f:
+            geojson_data = json.load(f)
+    except Exception as e:
+        return {"error": f"Failed to load GeoJSON file: {str(e)}"}
+
+    # State names list for filtering in all geojsons (keys of GCCSA_REGIONS)
+    states_list = list(GCCSA_REGIONS.keys())
+
+    # Generate tiles based on geojson type
+    for state_name in states_list:
+        # Filter features by state (key varies per geojson)
+        if geojson_type == "gccsa":
+            # gccsa geojson: filter by state and gccsa region
+            gccsa_regions = GCCSA_REGIONS.get(state_name, [])
+            for gccsa_region in gccsa_regions:
+                features = [
+                    feat for feat in geojson_data["features"]
+                    if feat["properties"].get("STE_NAME21") == state_name and
+                       feat["properties"].get("GCC_NAME21") == gccsa_region
+                ]
+                for feature in features:
+                    region_name = feature["properties"].get("GCC_NAME21")
+                    if region_name:
+                        try:
+                            tiles = generate_tiles_for_australia(
+                                tile_km=10,
+                                geojson_source=geojson_type,
+                                target_region=region_name,
+                                state_name=state_name
+                            )
+                            all_tiles.extend(tiles)
+                        except Exception as e:
+                            print(f"[TileGen ERROR] {region_name}: {e}")
+
+        elif geojson_type == "regions":
+            # regions geojson: filter by state only, generate tiles per SA2_NAME21 region
+            features = [
+                feat for feat in geojson_data["features"]
+                if feat["properties"].get("STE_NAME21") == state_name
             ]
-            for feature in matching_regions:
+            for feature in features:
                 region_name = feature["properties"].get("SA2_NAME21")
                 if region_name:
                     try:
-                        tiles = generate_tiles_for_australia(region_name, state_name)
+                        tiles = generate_tiles_for_australia(
+                            tile_km=10,
+                            geojson_source=geojson_type,
+                            target_region=region_name,
+                            state_name=state_name
+                        )
                         all_tiles.extend(tiles)
-                    except Exception as gen_err:
-                        print(f"[TileGen ERROR] {region_name}: {gen_err}")
+                    except Exception as e:
+                        print(f"[TileGen ERROR] {region_name}: {e}")
 
-    # Apply limit if specified
+        elif geojson_type == "lga":
+            # lga geojson: filter by state, generate tiles per LGA_NAME24
+            features = [
+                feat for feat in geojson_data["features"]
+                if feat["properties"].get("STE_NAME21") == state_name
+            ]
+            for feature in features:
+                region_name = feature["properties"].get("LGA_NAME24")
+                if region_name:
+                    try:
+                        tiles = generate_tiles_for_australia(
+                            tile_km=10,
+                            geojson_source=geojson_type,
+                            target_region=region_name,
+                            state_name=state_name
+                        )
+                        all_tiles.extend(tiles)
+                    except Exception as e:
+                        print(f"[TileGen ERROR] {region_name}: {e}")
+
+    # Apply limit if requested
     if limit_tiles > 0:
         all_tiles = all_tiles[:limit_tiles]
 
     if not all_tiles:
-        return {"error": "No dynamic tiles could be generated."}
+        return {"error": "No tiles generated."}
 
     total_saved = 0
     total_tiles = 0
@@ -319,21 +403,21 @@ async def crawl_text_search_full_route(dry_run: bool = False, limit_tiles: int =
         for btype in all_types:
             result = await business_manager.crawl_using_text_search(btype, all_tiles, dry_run=True)
             simulated_calls.extend(result.get("details", []))
-            all_failures.extend(result.get("failures", []))  # Still collect failures if any
+            all_failures.extend(result.get("failures", []))
             all_details.extend(result.get("details", []))
 
         return {
-            "message": "✅ DRY RUN: Simulation completed",
+            "message": f"✅ DRY RUN: Simulation complete using {geojson_type}",
             "total_business_types": len(all_types),
             "total_tiles": len(all_tiles),
             "total_simulated_requests": len(simulated_calls),
-            "planned_requests": simulated_calls[:10],
+            "planned_requests_sample": simulated_calls[:10],
             "failures": all_failures,
             "details": all_details,
-            "note": "No actual API or DB operations were performed."
+            "note": "No actual API or DB requests were made."
         }
 
-    # Real crawl execution
+    # Real crawl
     for btype in all_types:
         print(f"Real crawl: {btype}")
         result = await business_manager.crawl_using_text_search(btype, all_tiles, dry_run=False)
@@ -343,12 +427,14 @@ async def crawl_text_search_full_route(dry_run: bool = False, limit_tiles: int =
         all_details.extend(result.get("details", []))
 
     return {
-        "message": "✅ Full AU-wide text search crawl completed.",
+        "message": f"✅ Full AU-wide text search crawl completed using {geojson_type}.",
         "total_saved": total_saved,
         "tiles_scanned": total_tiles,
         "failures": all_failures,
-        "details": all_details
+        "details": all_details,
+        "total_business_types": len(all_types)
     }
+
 
 
 
@@ -367,3 +453,4 @@ async def check_coverage(state: Optional[str] = None, region: Optional[str] = No
         "state": state or "All States",
         "total_leads": count
     }
+

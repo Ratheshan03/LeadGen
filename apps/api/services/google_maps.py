@@ -1,7 +1,7 @@
 import requests
 import time
 import json
-from shapely.geometry import box, Point
+from shapely.geometry import box, Point 
 from utils.api_key_manager import APIKeyManager
 from config.constants import (
     GOOGLE_PLACES_NEARBY_URL,
@@ -76,6 +76,7 @@ class GoogleMapsService:
             time.sleep(2)  # Small wait as per Google API best practices
 
         return all_results
+    
 
     # Places Details API 
     def get_place_details(self, place_id: str):
@@ -93,6 +94,7 @@ class GoogleMapsService:
             raise Exception(f"Google API Error: {response.text}")
 
         return response.json()
+    
 
     # 🚀 Automated Crawl: Full Country Sweep
     def crawl_all_regions(self, dry_run: bool = False):
@@ -158,8 +160,9 @@ class GoogleMapsService:
         all_results = []
         page_token = None
         pages_fetched = 0
+        requests_made = 0
 
-        # 🧠 Prepare base payload ONCE with initial params (for reuse)
+        # prepare base payload ONCE
         base_payload = {
             "textQuery": text_query,
             "pageSize": max_results
@@ -167,28 +170,30 @@ class GoogleMapsService:
         if location_bias and "rectangle" in location_bias:
             base_payload["locationRestriction"] = location_bias
         else:
-            print("⚠️ No location bias provided. Skipping geo-filtering.")
+            print("⚠️ No location restriction provided. Skipping geo-filtering.")
 
-        for _ in range(10):
+        # Multiple pages handling - capped at 20 (unchanged)
+        for _ in range(20):
             if page_token:
                 payload = {**base_payload, "pageToken": page_token}
                 print(f"\n🔄 Fetching NEXT page {pages_fetched + 1} for '{text_query}'")
             else:
                 payload = base_payload.copy()
-                if "locationBias" in payload:
-                    print(f"\n📍 First page search for '{text_query}' with location bias")
+                if "locationRestriction" in payload:  # ✅ correct key
+                    print(f"\n📍 First page search for '{text_query}' with location restriction")
                 else:
-                    print(f"\n📍 First page search for '{text_query}' WITHOUT location bias")
+                    print(f"\n📍 First page search for '{text_query}' WITHOUT location restriction")
 
-            # print(f"📦 Payload being sent: {json.dumps(payload)}")
-
+            # ---- Perform request (with quota + retry handling) ----
             response = requests.post(GOOGLE_PLACES_TEXT_URL, json=payload, headers=headers)
+            requests_made += 1
             self.quota.increment()
 
             if response.status_code == 429:
                 print("🚫 Rate limit hit. Rotating API key...")
                 self.key_manager.rotate_key()
                 time.sleep(1.5)
+                # retry next loop iteration using the new key
                 continue
 
             if response.status_code != 200:
@@ -198,36 +203,43 @@ class GoogleMapsService:
             data = response.json()
             results = data.get("places", [])
             print(f"📊 Page {pages_fetched + 1} results: {len(results)} places found")
-            
-            # Get bounds from the rectangle
+
+            if not results:
+                print("⛔ Empty page returned. Stopping further requests to save quota.")
+                break
+
+            # Geo-filter strictly inside the tile rectangle
             if location_bias and "rectangle" in location_bias:
                 low = location_bias["rectangle"]["low"]
                 high = location_bias["rectangle"]["high"]
                 bounds_polygon = box(low["longitude"], low["latitude"], high["longitude"], high["latitude"])
 
-                # Filter: keep only points strictly within the tile box
                 filtered_results = []
                 for place in results:
                     loc = place.get("location", {})
                     if not loc or "longitude" not in loc or "latitude" not in loc:
                         print("⚠️ Skipping place: Missing or malformed location")
                         continue
-                    if "longitude" in loc and "latitude" in loc:
-                        point = Point(loc["longitude"], loc["latitude"])
-                        if bounds_polygon.contains(point):
-                            filtered_results.append(place)
+                    point = Point(loc["longitude"], loc["latitude"])
+                    if bounds_polygon.contains(point):
+                        filtered_results.append(place)
 
-            
                 print(f"🌐 Geo-filtered: {len(filtered_results)} / {len(results)} retained inside bounds")
                 results = filtered_results
-
             else:
-                print("⚠️ No location bias provided. Skipping geo-filtering.")
+                print("⚠️ No location restriction provided. Skipping geo-filtering.")
+
+            
+            # After geo-filtering
+            print(f"✅ Page {pages_fetched + 1} fetched: {len(results)} filtered results")
+
+            if not results:
+                print("⛔ No results after geo-filtering. Stopping further requests.")
+                break
 
             token = data.get("nextPageToken")
 
             print(f"✅ Page {pages_fetched + 1} fetched: {len(results)} filtered results")
-            # print(f"🔁 Next page token received: {token}")
 
             all_results.extend(results)
             pages_fetched += 1
@@ -239,12 +251,16 @@ class GoogleMapsService:
             page_token = token
             time.sleep(2.0)
 
+        # De-dup by 'id' (as requested in field mask)
         unique_results = {place["id"]: place for place in all_results if "id" in place}
 
-        print(f"\n🎯 Done: {len(unique_results)} total unique places returned across {pages_fetched} pages.")
+        print(f"\n🎯 Done: {len(unique_results)} total unique places across {pages_fetched} pages "
+              f"({requests_made} HTTP requests).")
 
         return {
             "results": list(unique_results.values()),
             "pages_fetched": pages_fetched,
-            "total_returned": len(unique_results)
+            "total_returned": len(unique_results),
+            "requests_made": requests_made
         }
+    

@@ -169,13 +169,15 @@ class BusinessManager:
                 "total_saved": 0,
                 "tiles_scanned": len(tiles),
                 "failures": [],
-                "details": dry_run_summary
+                "details": dry_run_summary,
+                "api_requests_total": 0  # ✅ explicit for clarity
             }
 
         total_saved = 0
         failures = []
         detailed_results = []
         saved_data = []
+        api_requests_total = 0  # ✅ sum requests across all tiles
 
         for tile in tiles:
             location_bias = {
@@ -188,7 +190,7 @@ class BusinessManager:
             try:
                 print(f"\n📍 Custom Tile: {tile.get('region')} ({tile.get('state')}), Query: '{query}'")
 
-                full_text_query = f"{query} in {region}, {state}, Australia"
+                # (unused var removed) full_text_query = f"{query} in {region}, {state}, Australia"
 
                 result_data = maps_service.text_search_places(
                     text_query=query,
@@ -198,8 +200,10 @@ class BusinessManager:
 
                 results = result_data.get("results", [])
                 pages_fetched = result_data.get("pages_fetched", 0)
-                count = 0
+                requests_made = result_data.get("requests_made", 0)  # ✅ from service
+                api_requests_total += requests_made
 
+                count = 0
                 for result in results:
                     place_id = result.get("place_id") or result.get("id")
                     if not place_id or await is_duplicate(db, place_id):
@@ -217,15 +221,16 @@ class BusinessManager:
                     count += 1
                     saved_data.append(business_data)
 
-                print(f"✅ {count} saved from {pages_fetched} pages")
+                print(f"✅ {count} saved from {pages_fetched} pages ({requests_made} HTTP requests)")
 
-                total_saved += count
                 detailed_results.append({
                     "region": tile.get("region"),
                     "state": tile.get("state"),
                     "saved": count,
-                    "pages": pages_fetched
+                    "pages": pages_fetched,
+                    "requests": requests_made  # ✅ per-tile visibility
                 })
+                total_saved += count
 
             except Exception as e:
                 error_msg = f"❌ Error in tile [{tile.get('region')} - {tile.get('state')} - Query: {query}]: {str(e)}"
@@ -249,5 +254,6 @@ class BusinessManager:
             "failures": failures,
             "details": detailed_results,
             "sample_results": cleaned_samples,
-            "saved_data": saved_data
+            "saved_data": saved_data,
+            "api_requests_total": api_requests_total  # ✅ aggregate
         }
