@@ -22,14 +22,16 @@ data/
 | Australia | `sa2` | Statistical Area Level 2 (suburb sized) | 2,454 |
 | Australia | `gccsa` | Greater Capital City / Rest of State | 16 |
 | New Zealand | `ta` | Territorial Authority (district / city council) | 67 |
-| New Zealand | `sa2` | Statistical Area 2 (suburb sized) | ~2,300 |
+| New Zealand | `sa2` | Statistical Area 2 (suburb sized) | 2,295 |
 | New Zealand | `region` | Regional Council area | 17 |
 
 Non-geographic entries in the official files ("No usual address",
 "Migratory - Offshore - Shipping", "Outside Australia") have no boundary and
 are left out. For New Zealand the offshore "Area Outside Territorial
 Authority" and the ocean / inlet / inland-water SA2s are left out, and "Area
-Outside Region" is named "Chatham Islands". NZ region names drop the word
+Outside Region" becomes a "Chatham Islands" region using the Chatham Islands
+council boundary (its remote uninhabited islands straddle the 180th meridian
+and are dropped). NZ region names drop the word
 "Region" (e.g. "Canterbury"). A council that spans two regions is listed under
 the region holding most of its land; each lead still gets the region it is
 actually in.

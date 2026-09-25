@@ -1,0 +1,103 @@
+{
+  "Auckland": [
+    "Auckland"
+  ],
+  "Bay of Plenty": [
+    "Kawerau District",
+    "Rotorua District",
+    "Tauranga City",
+    "Western Bay of Plenty District",
+    "Whakatane District",
+    "Ōpōtiki District"
+  ],
+  "Canterbury": [
+    "Ashburton District",
+    "Christchurch City",
+    "Hurunui District",
+    "Kaikoura District",
+    "Mackenzie District",
+    "Selwyn District",
+    "Timaru District",
+    "Waimakariri District",
+    "Waimate District",
+    "Waitaki District"
+  ],
+  "Chatham Islands": [
+    "Chatham Islands Territory"
+  ],
+  "Gisborne": [
+    "Gisborne District"
+  ],
+  "Hawke's Bay": [
+    "Central Hawke's Bay District",
+    "Hastings District",
+    "Napier City",
+    "Wairoa District"
+  ],
+  "Manawatū-Whanganui": [
+    "Horowhenua District",
+    "Manawatu District",
+    "Palmerston North City",
+    "Rangitikei District",
+    "Ruapehu District",
+    "Tararua District",
+    "Whanganui District"
+  ],
+  "Marlborough": [
+    "Marlborough District"
+  ],
+  "Nelson": [
+    "Nelson City"
+  ],
+  "Northland": [
+    "Far North District",
+    "Kaipara District",
+    "Whangarei District"
+  ],
+  "Otago": [
+    "Central Otago District",
+    "Clutha District",
+    "Dunedin City",
+    "Queenstown-Lakes District"
+  ],
+  "Southland": [
+    "Gore District",
+    "Invercargill City",
+    "Southland District"
+  ],
+  "Taranaki": [
+    "New Plymouth District",
+    "South Taranaki District",
+    "Stratford District"
+  ],
+  "Tasman": [
+    "Tasman District"
+  ],
+  "Waikato": [
+    "Hamilton City",
+    "Hauraki District",
+    "Matamata-Piako District",
+    "South Waikato District",
+    "Taupo District",
+    "Thames-Coromandel District",
+    "Waikato District",
+    "Waipa District",
+    "Waitomo District",
+    "Ōtorohanga District"
+  ],
+  "Wellington": [
+    "Carterton District",
+    "Kapiti Coast District",
+    "Lower Hutt City",
+    "Masterton District",
+    "Porirua City",
+    "South Wairarapa District",
+    "Upper Hutt City",
+    "Wellington City"
+  ],
+  "West Coast": [
+    "Buller District",
+    "Grey District",
+    "Westland District"
+  ]
+}
