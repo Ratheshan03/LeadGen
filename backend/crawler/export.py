@@ -47,9 +47,10 @@ def city_output_paths(country, city: dict, types_label: str) -> dict[str, Path]:
     return {"excel": folder / f"{base}.xlsx", "map": folder / f"{base}_map.html"}
 
 
-def export_path(label: str) -> Path:
+def export_path(label: str, create: bool = True) -> Path:
     folder = settings.OUTPUT_DIR / "exports"
-    folder.mkdir(parents=True, exist_ok=True)
+    if create:
+        folder.mkdir(parents=True, exist_ok=True)
     return folder / f"leads_{safe_name(label)}_{_stamp()}.xlsx"
 
 

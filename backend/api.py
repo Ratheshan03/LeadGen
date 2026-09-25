@@ -1,11 +1,15 @@
 """HTTP API used by custom_crawl.py, full_crawl.py and the dashboard."""
 from __future__ import annotations
 
+import shutil
+import tempfile
+from pathlib import Path
 from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
+from starlette.background import BackgroundTask
 
 from backend.config import settings
 from backend.config.business_types import BusinessTypesError, get_business_types
@@ -214,6 +218,7 @@ def leads_export(country: str | None = None, state: str | None = None, council: 
     filters = {"country": flt.country, "state": state, "council": council, "business_type": business_type,
                "name_contains": q, "has_phone": has_phone, "has_website": has_website}
     label = "_".join(str(v) for v in (flt.country, state, council, business_type) if v) or "all"
-    path = export.write_export_excel(export.export_path(label), items, filters)
-    return FileResponse(path, filename=path.name,
+    tmp_dir = Path(tempfile.mkdtemp(prefix="leadgen_export_"))
+    path = export.write_export_excel(tmp_dir / export.export_path(label, create=False).name, items, filters)
+    return FileResponse(path, filename=path.name, background=BackgroundTask(shutil.rmtree, tmp_dir, True),
                         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
