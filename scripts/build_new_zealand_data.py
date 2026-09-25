@@ -59,6 +59,10 @@ WFS = "https://datafinder.stats.govt.nz/services;key={key}/wfs"
 SKIP_TA_CODES = {"999"}
 SKIP_SA2_PREFIXES = ("oceanic", "inlet", "inland water")
 REGION_RENAMES = {"Area Outside Region": "Chatham Islands"}
+# "Area Outside Region" mixes the Chatham Islands with remote islands on both
+# sides of the 180th meridian; it is rebuilt from the Chatham Islands council.
+OUTSIDE_REGION = "Area Outside Region"
+CHATHAM_TA = "Chatham Islands Territory"
 
 
 # ------------------------------------------------------------------ download --
@@ -142,9 +146,12 @@ def build_features(gdf, level) -> list[dict]:
         if geom is None:
             continue
         minx, _, maxx, _ = geom.bounds
-        if maxx - minx > 20:  # would cross the 180th meridian - not a crawlable land area
-            print(f"  skipping {name}: spans the 180th meridian")
-            continue
+        if maxx - minx > 20:  # crosses the 180th meridian - not a crawlable land area as-is
+            if level == "region" and name == OUTSIDE_REGION:
+                geom = None  # replaced by the Chatham Islands council boundary in main()
+            else:
+                print(f"  skipping {name}: spans the 180th meridian")
+                continue
         area = float(row[area_col]) if area_col and row[area_col] == row[area_col] else 0.0
         out.append({"name": clean_region_name(name) if level == "region" else name,
                     "code": code, "area_km2": area, "geometry": geom})
@@ -184,6 +191,12 @@ def main() -> None:
     regions = build_features(read_level("region"), "region")
     tas = build_features(read_level("ta"), "ta")
     sa2s = build_features(read_level("sa2"), "sa2")
+
+    chatham = next((t for t in tas if t["name"] == CHATHAM_TA), None)
+    for r in regions:
+        if r["geometry"] is None and chatham:
+            r["geometry"], r["area_km2"] = chatham["geometry"], chatham["area_km2"]
+    regions = [r for r in regions if r["geometry"] is not None]
     print(f"regions: {len(regions)}, territorial authorities: {len(tas)}, SA2s: {len(sa2s)}")
 
     assign_parent(tas, regions, "state", by_largest_overlap=True)
