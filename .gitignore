@@ -22,15 +22,6 @@ data/*/source/
 # --- Local notes ---
 _internal_notes/
 
-# --- Legacy layout (removed after migration) ---
-apps/.venv/
-apps/api/data/geojson/*.geojson
-apps/api/output_maps/
-apps/api/logs/
-apps/api/api_quota_usage.json
-apps/api/.quota_*.tmp
-docker-compose.yml
-
 # --- OS / editors ---
 .DS_Store
 Thumbs.db
