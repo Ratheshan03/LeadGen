@@ -129,8 +129,10 @@ class AreaSet:
         self.level = level
         self.areas = areas
         self._by_key: dict[str, list[Area]] = {}
+        self._by_code: dict[str, Area] = {}
         for a in areas:
             self._by_key.setdefault(a.key, []).append(a)
+            self._by_code[a.code] = a
         self._tree = STRtree([a.geometry for a in areas])
 
     def __len__(self) -> int:
@@ -161,6 +163,12 @@ class AreaSet:
         if suggestions:
             hint = " Did you mean: " + ", ".join(self._by_key[s][0].name for s in suggestions) + "?"
         raise GeoError(f"No {label} called '{name}' in {self.country.name}.{hint}")
+
+    def by_code(self, code: str) -> Area:
+        try:
+            return self._by_code[str(code)]
+        except KeyError:
+            raise GeoError(f"No area with code '{code}' in {self.country.name} ({self.level}).") from None
 
     def search(self, text: str, limit: int = 20) -> list[Area]:
         t = (text or "").strip().lower()

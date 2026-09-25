@@ -1,0 +1,314 @@
+[
+  {
+    "name": "Sydney",
+    "state": "New South Wales",
+    "lat": -33.8688,
+    "lng": 151.2093
+  },
+  {
+    "name": "Newcastle",
+    "state": "New South Wales",
+    "lat": -32.9283,
+    "lng": 151.7817
+  },
+  {
+    "name": "Wollongong",
+    "state": "New South Wales",
+    "lat": -34.4278,
+    "lng": 150.8931
+  },
+  {
+    "name": "Albury",
+    "state": "New South Wales",
+    "lat": -36.0737,
+    "lng": 146.9135
+  },
+  {
+    "name": "Maitland",
+    "state": "New South Wales",
+    "lat": -32.7335,
+    "lng": 151.557
+  },
+  {
+    "name": "Wagga Wagga",
+    "state": "New South Wales",
+    "lat": -35.118,
+    "lng": 147.3598
+  },
+  {
+    "name": "Port Macquarie",
+    "state": "New South Wales",
+    "lat": -31.43,
+    "lng": 152.908
+  },
+  {
+    "name": "Tamworth",
+    "state": "New South Wales",
+    "lat": -31.0833,
+    "lng": 150.9333
+  },
+  {
+    "name": "Coffs Harbour",
+    "state": "New South Wales",
+    "lat": -30.2963,
+    "lng": 153.1135
+  },
+  {
+    "name": "Melbourne",
+    "state": "Victoria",
+    "lat": -37.8142,
+    "lng": 144.9631
+  },
+  {
+    "name": "Geelong",
+    "state": "Victoria",
+    "lat": -38.1499,
+    "lng": 144.3617
+  },
+  {
+    "name": "Ballarat",
+    "state": "Victoria",
+    "lat": -37.5622,
+    "lng": 143.8503
+  },
+  {
+    "name": "Bendigo",
+    "state": "Victoria",
+    "lat": -36.757,
+    "lng": 144.2794
+  },
+  {
+    "name": "Shepparton",
+    "state": "Victoria",
+    "lat": -36.3805,
+    "lng": 145.3989
+  },
+  {
+    "name": "Mildura",
+    "state": "Victoria",
+    "lat": -34.2052,
+    "lng": 142.1367
+  },
+  {
+    "name": "Warrnambool",
+    "state": "Victoria",
+    "lat": -38.3818,
+    "lng": 142.4875
+  },
+  {
+    "name": "Traralgon",
+    "state": "Victoria",
+    "lat": -38.195,
+    "lng": 146.5408
+  },
+  {
+    "name": "Brisbane",
+    "state": "Queensland",
+    "lat": -27.4698,
+    "lng": 153.0251
+  },
+  {
+    "name": "Gold Coast",
+    "state": "Queensland",
+    "lat": -28.0167,
+    "lng": 153.4
+  },
+  {
+    "name": "Cairns",
+    "state": "Queensland",
+    "lat": -16.9186,
+    "lng": 145.7781
+  },
+  {
+    "name": "Townsville",
+    "state": "Queensland",
+    "lat": -19.2589,
+    "lng": 146.8169
+  },
+  {
+    "name": "Toowoomba",
+    "state": "Queensland",
+    "lat": -27.5606,
+    "lng": 151.9539
+  },
+  {
+    "name": "Rockhampton",
+    "state": "Queensland",
+    "lat": -23.3783,
+    "lng": 150.51
+  },
+  {
+    "name": "Mackay",
+    "state": "Queensland",
+    "lat": -21.1411,
+    "lng": 149.186
+  },
+  {
+    "name": "Bundaberg",
+    "state": "Queensland",
+    "lat": -24.8667,
+    "lng": 152.35
+  },
+  {
+    "name": "Hervey Bay",
+    "state": "Queensland",
+    "lat": -25.288,
+    "lng": 152.8206
+  },
+  {
+    "name": "Perth",
+    "state": "Western Australia",
+    "lat": -31.9505,
+    "lng": 115.8605
+  },
+  {
+    "name": "Fremantle",
+    "state": "Western Australia",
+    "lat": -32.0569,
+    "lng": 115.7439
+  },
+  {
+    "name": "Bunbury",
+    "state": "Western Australia",
+    "lat": -33.3271,
+    "lng": 115.6414
+  },
+  {
+    "name": "Albany",
+    "state": "Western Australia",
+    "lat": -35.0269,
+    "lng": 117.8831
+  },
+  {
+    "name": "Geraldton",
+    "state": "Western Australia",
+    "lat": -28.7742,
+    "lng": 114.614
+  },
+  {
+    "name": "Kalgoorlie",
+    "state": "Western Australia",
+    "lat": -30.7489,
+    "lng": 121.4655
+  },
+  {
+    "name": "Broome",
+    "state": "Western Australia",
+    "lat": -17.9614,
+    "lng": 122.2359
+  },
+  {
+    "name": "Adelaide",
+    "state": "South Australia",
+    "lat": -34.9285,
+    "lng": 138.6007
+  },
+  {
+    "name": "Mount Gambier",
+    "state": "South Australia",
+    "lat": -37.8318,
+    "lng": 140.779
+  },
+  {
+    "name": "Whyalla",
+    "state": "South Australia",
+    "lat": -33.0328,
+    "lng": 137.561
+  },
+  {
+    "name": "Gawler",
+    "state": "South Australia",
+    "lat": -34.5967,
+    "lng": 138.7458
+  },
+  {
+    "name": "Port Lincoln",
+    "state": "South Australia",
+    "lat": -34.7208,
+    "lng": 135.8589
+  },
+  {
+    "name": "Port Pirie",
+    "state": "South Australia",
+    "lat": -33.1775,
+    "lng": 138.0086
+  },
+  {
+    "name": "Murray Bridge",
+    "state": "South Australia",
+    "lat": -35.1199,
+    "lng": 139.2734
+  },
+  {
+    "name": "Hobart",
+    "state": "Tasmania",
+    "lat": -42.8821,
+    "lng": 147.3272
+  },
+  {
+    "name": "Launceston",
+    "state": "Tasmania",
+    "lat": -41.4388,
+    "lng": 147.1347
+  },
+  {
+    "name": "Devonport",
+    "state": "Tasmania",
+    "lat": -41.1762,
+    "lng": 146.3513
+  },
+  {
+    "name": "Burnie",
+    "state": "Tasmania",
+    "lat": -41.0558,
+    "lng": 145.9036
+  },
+  {
+    "name": "Canberra",
+    "state": "Australian Capital Territory",
+    "lat": -35.2809,
+    "lng": 149.13
+  },
+  {
+    "name": "Belconnen",
+    "state": "Australian Capital Territory",
+    "lat": -35.2369,
+    "lng": 149.0686
+  },
+  {
+    "name": "Gungahlin",
+    "state": "Australian Capital Territory",
+    "lat": -35.185,
+    "lng": 149.1333
+  },
+  {
+    "name": "Tuggeranong",
+    "state": "Australian Capital Territory",
+    "lat": -35.4154,
+    "lng": 149.0626
+  },
+  {
+    "name": "Darwin",
+    "state": "Northern Territory",
+    "lat": -12.4634,
+    "lng": 130.8456
+  },
+  {
+    "name": "Alice Springs",
+    "state": "Northern Territory",
+    "lat": -23.698,
+    "lng": 133.8807
+  },
+  {
+    "name": "Palmerston",
+    "state": "Northern Territory",
+    "lat": -12.4861,
+    "lng": 130.983
+  },
+  {
+    "name": "Katherine",
+    "state": "Northern Territory",
+    "lat": -14.4656,
+    "lng": 132.2635
+  }
+]
