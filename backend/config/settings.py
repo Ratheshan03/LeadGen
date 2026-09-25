@@ -62,7 +62,9 @@ QUOTA_FILE = STORAGE_DIR / "api_quota_usage.json"
 # --- Backend / clients -------------------------------------------------------
 BACKEND_HOST = os.getenv("BACKEND_HOST", "127.0.0.1").strip() or "127.0.0.1"
 BACKEND_PORT = _int("BACKEND_PORT", 8000)
-BACKEND_API_URL = (os.getenv("BACKEND_API_URL", "").strip() or f"http://localhost:{BACKEND_PORT}").rstrip("/")
+# 127.0.0.1 rather than "localhost": on Windows "localhost" tries IPv6 first,
+# adding a ~2 s delay to every call.
+BACKEND_API_URL = (os.getenv("BACKEND_API_URL", "").strip() or f"http://127.0.0.1:{BACKEND_PORT}").rstrip("/")
 CORS_ORIGINS = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:8501").split(",") if o.strip()]
 
 # --- Data build (New Zealand boundaries from Stats NZ) ------------------------
