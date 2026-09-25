@@ -12,9 +12,9 @@ venv/
 .pytest_cache/
 
 # --- Runtime data (created when the app runs) ---
-storage/
-output/
-logs/
+/storage/
+/output/
+/logs/
 
 # --- Raw source downloads (rebuild inputs, see data/README.md) ---
 data/*/source/
