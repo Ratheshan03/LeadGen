@@ -15,7 +15,7 @@ class LeadModel(BaseModel):
     state: Optional[str]
     region: Optional[str]  # City
     category: Optional[str]  # e.g. "Retail & Suppliers"
-    business_type: Optional[str]  # e.g. "office_supply_store"
+    business_types: List[str] = Field(default_factory=list)  # e.g. ["office_supply_store", "accounting"]
 
     # Timestamp for crawl tracking
     retrieved_at: datetime = Field(default_factory=datetime.utcnow)

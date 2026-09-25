@@ -15,6 +15,58 @@ async def insert_lead(db: AsyncIOMotorDatabase, lead_data: Dict[str, Any]) -> st
     result = await db.leads.insert_one(lead_data)
     return str(result.inserted_id)
 
+# Upsert lead with business_type appending (Solution 1)
+async def upsert_lead_with_business_type(
+    db: AsyncIOMotorDatabase,
+    lead_data: Dict[str, Any],
+    business_type: str
+) -> tuple[bool, str]:
+    """
+    Insert or update a lead. If the place_id exists, append the business_type to business_types array.
+
+    Returns:
+        tuple[bool, str]: (is_new, operation_type)
+            - is_new: True if new record created, False if updated existing
+            - operation_type: "inserted", "updated", or "no_change"
+    """
+    place_id = lead_data.get("place_id")
+    if not place_id:
+        raise ValueError("place_id is required")
+
+    # Check if record exists
+    existing = await db.leads.find_one({"place_id": place_id})
+
+    if existing:
+        # Record exists - check if business_type already in business_types array
+        existing_types = existing.get("business_types", [])
+
+        # Also check old field for backward compatibility
+        old_business_type = existing.get("business_type")
+        if old_business_type and old_business_type not in existing_types:
+            existing_types.append(old_business_type)
+
+        if business_type in existing_types:
+            # Business type already tracked for this place
+            return (False, "no_change")
+
+        # Append new business_type
+        await db.leads.update_one(
+            {"place_id": place_id},
+            {
+                "$addToSet": {"business_types": business_type},
+                "$set": {"retrieved_at": lead_data.get("retrieved_at")}
+            }
+        )
+        return (False, "updated")
+    else:
+        # New record - insert with business_types as array
+        lead_data["business_types"] = [business_type]
+        # Remove old business_type field if present
+        lead_data.pop("business_type", None)
+
+        result = await db.leads.insert_one(lead_data)
+        return (True, "inserted")
+
 # Batch insert with deduplication
 async def insert_leads_batch(db: AsyncIOMotorDatabase, leads: List[Dict[str, Any]]) -> int:
     if not leads:
@@ -55,7 +107,11 @@ async def get_leads_by_filter(
         query["category"] = {"$regex": f"^{category}$", "$options": "i"}
 
     if business_type:
-        query["business_type"] = {"$regex": f"^{business_type}$", "$options": "i"}
+        # Support both old business_type field and new business_types array
+        query["$or"] = [
+            {"business_type": {"$regex": f"^{business_type}$", "$options": "i"}},
+            {"business_types": {"$elemMatch": {"$regex": f"^{business_type}$", "$options": "i"}}}
+        ]
 
     leads = await db.leads.find(query).to_list(length=1000)
     return leads
@@ -106,7 +162,7 @@ def export_to_excel(data: list, region: str, state: str, business_type: str = "A
             "Opening Hours": "\n".join(entry.get("opening_hours", [])),
             "State": entry.get("state"),
             "Region": entry.get("region"),
-            "Business Type": entry.get("business_type"),
+            "Business Types": ", ".join(entry.get("business_types", [])) or entry.get("business_type", ""),  # Support both formats
             "Crawl Category": entry.get("category"),
         })
 

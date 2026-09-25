@@ -50,6 +50,13 @@ class GoogleMapsService:
         next_page_token = None
 
         for _ in range(10):  # Max 10 pages per type/location (tune as needed)
+            # Hard-stop quota guard (before spending a request)
+            if not self.quota.is_within_limit():
+                print(f"🛑 Monthly API quota reached "
+                      f"({self.quota.get_usage()}/{self.quota.max_requests}). "
+                      f"Stopping nearby search to protect budget.")
+                break
+
             payload = self._get_payload(location, place_type, radius, next_page_token)
             headers = self._get_headers()
 
@@ -161,6 +168,7 @@ class GoogleMapsService:
         page_token = None
         pages_fetched = 0
         requests_made = 0
+        quota_exceeded = False
 
         # prepare base payload ONCE
         base_payload = {
@@ -184,6 +192,14 @@ class GoogleMapsService:
                 else:
                     print(f"\n📍 First page search for '{text_query}' WITHOUT location restriction")
 
+            # ---- Hard-stop quota guard (before spending a request) ----
+            if not self.quota.is_within_limit():
+                print(f"🛑 Monthly API quota reached "
+                      f"({self.quota.get_usage()}/{self.quota.max_requests}). "
+                      f"Stopping crawl to protect budget.")
+                quota_exceeded = True
+                break
+
             # ---- Perform request (with quota + retry handling) ----
             response = requests.post(GOOGLE_PLACES_TEXT_URL, json=payload, headers=headers)
             requests_made += 1
@@ -191,7 +207,9 @@ class GoogleMapsService:
 
             if response.status_code == 429:
                 print("🚫 Rate limit hit. Rotating API key...")
-                self.key_manager.rotate_key()
+                # rotate AND apply the new key to this request's headers,
+                # otherwise the retry would reuse the rate-limited key.
+                headers["X-Goog-Api-Key"] = self.key_manager.rotate_key()
                 time.sleep(1.5)
                 # retry next loop iteration using the new key
                 continue
@@ -261,6 +279,7 @@ class GoogleMapsService:
             "results": list(unique_results.values()),
             "pages_fetched": pages_fetched,
             "total_returned": len(unique_results),
-            "requests_made": requests_made
+            "requests_made": requests_made,
+            "quota_exceeded": quota_exceeded
         }
     

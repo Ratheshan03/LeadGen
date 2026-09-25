@@ -24,18 +24,13 @@ BUSINESS_CATEGORIES = {
         "museum",
         "art_gallery",
         "cultural_center",
-        "historical_place",
     ],
     "Education": [
         "university",
         "school",
         "library",
-        "preschool",
-        "primary_school",
-        "secondary_school",
     ],
     "Entertainment and Recreation": [
-        "amusement_park",
         "zoo",
         "movie_theater",
         "night_club",
@@ -47,7 +42,6 @@ BUSINESS_CATEGORIES = {
         "park",
     ],
     "Facilities": [
-        "public_bathroom",
         "stable",
     ],
     "Finance": [
@@ -61,9 +55,6 @@ BUSINESS_CATEGORIES = {
         "meal_delivery",
         "meal_takeaway",
         "bakery",
-        "fast_food_restaurant",
-        "pub",
-        "coffee_shop",
     ],
     "Geographical Areas": [
         # Not useful for crawling actual businesses
@@ -98,14 +89,12 @@ BUSINESS_CATEGORIES = {
         "resort_hotel",
     ],
     "Natural Features": [
-        "beach",
-        "national_park",
+        # beach, national_park removed — not business leads
     ],
     "Places of Worship": [
         "church",
         "mosque",
         "hindu_temple",
-        "synagogue",
     ],
     "Services": [
         "electrician",
@@ -124,7 +113,6 @@ BUSINESS_CATEGORIES = {
     "Shopping": [
         "shopping_mall",
         "grocery_store",
-        "convenience_store",
         "supermarket",
         "hardware_store",
         "clothing_store",
@@ -147,11 +135,8 @@ BUSINESS_CATEGORIES = {
     ],
     "Transportation": [
         "train_station",
-        "bus_station",
-        "taxi_stand",
         "subway_station",
         "airport",
-        "ferry_terminal",
     ]
 }
 
@@ -336,6 +321,48 @@ GCCSA_REGIONS = {
         "Other Territories"
     ]
 }
+
+
+# A region collapses to a SINGLE bounding-box tile only when BOTH hold:
+#   1. its area >= SPARSE_GIANT_AREA_KM2, AND
+#   2. it is flagged low-density (see is_low_density_lga below).
+# Grid-tiling a vast sparse LGA wastes huge request volume on empty desert
+# (East Pilbara: 23 tiles → ~2,530 Google requests for only ~1,954 leads). But
+# area alone is too blunt — some large LGAs are real regional cities (Mildura
+# ~22,000 km², Kalgoorlie-Boulder ~95,000 km²) that need full grid coverage.
+# Requiring the low-density flag keeps those on normal tiling.
+SPARSE_GIANT_AREA_KM2 = 20000
+
+# Genuinely remote / sparsely-populated LGAs (desert, pastoral, Aboriginal
+# lands, outback). The LGA GeoJSON carries no population field, so this curated
+# set is the density signal. Names are lowercased LGA_NAME24 values. Large LGAs
+# NOT in this set (e.g. Mildura, Kalgoorlie-Boulder, Whitsunday, East Gippsland)
+# keep full grid tiling even above the area threshold.
+LOW_DENSITY_LGAS = {
+    # Western Australia — Pilbara / Kimberley / Goldfields / Gascoyne / Murchison
+    "east pilbara", "halls creek", "wyndham-east kimberley", "derby-west kimberley",
+    "meekatharra", "wiluna", "laverton", "menzies", "ngaanyatjarraku", "ashburton",
+    "upper gascoyne", "shark bay", "sandstone", "cue", "yalgoo", "murchison",
+    "mount magnet", "leonora", "dundas", "exmouth", "carnarvon",
+    # South Australia
+    "unincorporated sa", "anangu pitjantjatjara yankunytjatjara", "maralinga tjarutja",
+    "coober pedy", "roxby downs", "flinders ranges", "ceduna",
+    # Northern Territory
+    "barkly", "central desert", "macdonnell", "roper gulf", "victoria daly",
+    "west arnhem", "east arnhem", "west daly", "tiwi islands",
+    # Queensland — Gulf / Channel Country / Cape York (remote)
+    "cook", "carpentaria", "burke", "diamantina", "boulia", "bulloo", "barcoo",
+    "quilpie", "winton", "mckinlay", "cloncurry", "etheridge", "croydon",
+    "flinders (qld)", "richmond", "aurukun", "pormpuraaw", "kowanyama", "doomadgee",
+    "mornington", "northern peninsula area", "torres", "torres strait island",
+    # NSW far west
+    "central darling", "unincorporated nsw", "brewarrina", "bourke", "cobar",
+}
+
+
+def is_low_density_lga(name: str) -> bool:
+    """True if an LGA name is in the curated remote/sparse set (case-insensitive)."""
+    return (name or "").strip().lower() in LOW_DENSITY_LGAS
 
 
 # Tile sizing strategy based on area in square kilometers

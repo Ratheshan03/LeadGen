@@ -15,6 +15,18 @@ class APIKeyManager:
         random.shuffle(self.api_keys)
 
         self.keys_cycle = itertools.cycle(self.api_keys)  # round robin
+        self.current_key = next(self.keys_cycle)
 
     def get_key(self) -> str:
-        return next(self.keys_cycle)
+        return self.current_key
+
+    def rotate_key(self) -> str:
+        """
+        Advance to the next API key in the round-robin cycle.
+
+        Called when the current key hits a rate limit (HTTP 429) so the next
+        request uses a different key. With a single key this is a no-op (the
+        same key is returned), which is correct — there is nothing to rotate to.
+        """
+        self.current_key = next(self.keys_cycle)
+        return self.current_key

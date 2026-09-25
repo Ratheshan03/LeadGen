@@ -222,6 +222,9 @@ async def crawl_text_search_custom_route(
         details = []
         combined_saved_data = []
         api_requests_grand_total = 0
+        tile_crawls_total = 0  # tile×business-type operations (not geographic tiles)
+        quota_exceeded = False
+        business_types_crawled = 0
 
         for btype in ALL_BUSINESS_TYPES:
             try:
@@ -234,6 +237,16 @@ async def crawl_text_search_custom_route(
                 details.extend(result.get("details", []))
                 combined_saved_data.extend(result.get("saved_data", []))
                 api_requests_grand_total += result.get("api_requests_total", 0)
+                tile_crawls_total += result.get("tiles_scanned", 0)
+                business_types_crawled += 1
+
+                # Hard-stop: once the monthly quota is hit, stop crawling the
+                # remaining business types instead of hammering the no-op guard.
+                if result.get("quota_exceeded"):
+                    quota_exceeded = True
+                    print(f"🛑 Quota cap reached after {business_types_crawled} "
+                          f"business types — stopping ALL-type crawl for {region}.")
+                    break
             except Exception as e:
                 print(f"❌ Error while crawling '{btype}': {str(e)}")
                 failures.append({"business_type": btype, "error": str(e)})
@@ -245,17 +258,25 @@ async def crawl_text_search_custom_route(
             business_type="ALL"
         )
 
+        # ~$32 USD per 1000 Text Search (New) requests
+        estimated_cost_usd = round(api_requests_grand_total / 1000 * 32, 2)
+
         return {
             "message": f"✅ Crawled all business types in region: {region}, state: {state}",
             "business_types": len(ALL_BUSINESS_TYPES),
+            "business_types_crawled": business_types_crawled,
             "dry_run": dry_run,
             "failures": len(failures),
             "details": len(details),
             "total_saved": len(combined_saved_data),
             "tiles_generated": len(tiles),
+            "tiles_scanned": len(tiles),  # geographic tiles for this region
+            "tile_crawls": tile_crawls_total,  # tile×business-type operations
             "tiles": tiles,
             "excel_file": excel_path,
-            "api_requests_total": api_requests_grand_total  # ✅ surfaced
+            "api_requests_total": api_requests_grand_total,  # ✅ surfaced
+            "estimated_cost_usd": estimated_cost_usd,
+            "quota_exceeded": quota_exceeded
         }
 
     # Single business type

@@ -26,6 +26,12 @@ apps/api/venv/
 apps/web/.next/
 apps/web/out/
 
+# Runtime-generated data / artifacts (must never be committed)
+apps/api/api_quota_usage.json
+apps/api/.quota_*.tmp
+apps/api/tmp*
+apps/api/full_crawl_dry_run_summary_*.json
+
 # Environment variables
 .env
 .env.local

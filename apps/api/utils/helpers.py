@@ -11,6 +11,7 @@ import pyproj
 from tqdm import tqdm
 from config.constants import REGION_COORDINATES, AU_REGIONS
 from config.constants import GCCSA_REGIONS, TILE_SIZE_OVERRIDES, LOW_DENSITY_REGION_KEYWORDS
+from config.constants import SPARSE_GIANT_AREA_KM2, is_low_density_lga
 
 
 def transform_place_result(result: dict) -> dict:
@@ -36,6 +37,68 @@ def transform_place_result(result: dict) -> dict:
 
 def km_to_lat_lon_deltas(km: float):
     return km / 111, km / 111  # ~111 km per degree latitude/longitude
+
+
+def split_tile_longer_side(tile: dict):
+    """
+    Split a single tile rectangle into TWO halves across its longer side.
+
+    Used for saturation handling: when a tile returns Google's hard max of 60
+    results (3 full pages) for a business type, it likely truncated more, so we
+    split it and re-crawl the halves to recover the missed businesses.
+
+    A tile is {..., "low": {"latitude", "longitude"}, "high": {...}}. Returns a
+    list of two new tiles with the same metadata (region/state/source) and a
+    "_h0"/"_h1" suffix on tile_name. Latitude is compared against longitude by
+    raw degree span — good enough to avoid thin slivers for a single 2-way cut.
+    Returns [] if the tile is degenerate (zero-area), so callers can skip.
+    """
+    low = tile.get("low", {})
+    high = tile.get("high", {})
+    lat_min = low.get("latitude")
+    lat_max = high.get("latitude")
+    lon_min = low.get("longitude")
+    lon_max = high.get("longitude")
+
+    if None in (lat_min, lat_max, lon_min, lon_max):
+        return []
+
+    lat_span = lat_max - lat_min
+    lon_span = lon_max - lon_min
+    if lat_span <= 0 or lon_span <= 0:
+        return []
+
+    base = {
+        "region": tile.get("region"),
+        "state": tile.get("state"),
+        "source": tile.get("source"),
+    }
+    name = tile.get("tile_name", "tile")
+
+    if lat_span >= lon_span:
+        # split across latitude (north / south halves)
+        mid = (lat_min + lat_max) / 2
+        halves = [
+            (lat_min, mid, lon_min, lon_max),
+            (mid, lat_max, lon_min, lon_max),
+        ]
+    else:
+        # split across longitude (east / west halves)
+        mid = (lon_min + lon_max) / 2
+        halves = [
+            (lat_min, lat_max, lon_min, mid),
+            (lat_min, lat_max, mid, lon_max),
+        ]
+
+    out = []
+    for i, (a_lat, b_lat, a_lon, b_lon) in enumerate(halves):
+        out.append({
+            **base,
+            "tile_name": f"{name}_h{i}",
+            "low": {"latitude": round(a_lat, 6), "longitude": round(a_lon, 6)},
+            "high": {"latitude": round(b_lat, 6), "longitude": round(b_lon, 6)},
+        })
+    return out
 
 
 # Tile Generation for all regions using GeoJSON files
@@ -131,6 +194,27 @@ def generate_tiles_for_australia(
         area = meta_area if meta_area > 0 else geom_area
 
         print(f"   • {region_name.title()}: Area={area:.1f} km², Tile Size={tile_km_local}km")
+
+        # ---------------- Case 0: Sparse giant — force ONE tile ----------------
+        # Vast AND sparsely-populated outback LGAs (e.g. East Pilbara ~372,000
+        # km²) have almost no business density. Grid tiling them burns thousands
+        # of requests on empty desert. Cover the whole region with a single
+        # bounding-box tile instead. Requires BOTH a large area AND a low-density
+        # flag, so large regional cities (Mildura, Kalgoorlie) keep full tiling.
+        if area >= SPARSE_GIANT_AREA_KM2 and is_low_density_lga(region_name):
+            tile_box_wgs84 = transform(reverse_project, box(min_x, min_y, max_x, max_y))
+            lon_min, lat_min, lon_max, lat_max = tile_box_wgs84.bounds
+            region_tiles.append({
+                "region": region_name,
+                "state": state_name,
+                "source": geojson_source,
+                "tile_name": f"{region_name.replace(' ', '_')}_sparse_single",
+                "low": {"latitude": round(lat_min, 6), "longitude": round(lon_min, 6)},
+                "high": {"latitude": round(lat_max, 6), "longitude": round(lon_max, 6)}
+            })
+            print(f"🏜️ Sparse-giant single-tile coverage for '{region_name}' "
+                  f"(area {area:,.0f} km² ≥ {SPARSE_GIANT_AREA_KM2:,} km² threshold)")
+            return region_tiles
 
         # ---------------- Case 1 + Case 2: Single tile coverage ----------------
         bbox_width_km = (max_x - min_x) / 1000
