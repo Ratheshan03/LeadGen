@@ -51,7 +51,7 @@ class CrawlPlan:
         if self.mode == "area" and self.areas:
             return f"{self.areas[0].name}, {self.areas[0].state} ({self.types_label})"
         states = sorted({a.state for a in self.areas})
-        where = states[0] if len(states) == 1 else f"{self.country.name}"
+        where = ", ".join(states) if 0 < len(states) <= 3 else self.country.name
         return f"{where} - {len(self.areas)} areas ({self.types_label})"
 
 
