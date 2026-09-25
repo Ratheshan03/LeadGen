@@ -16,7 +16,7 @@ from backend.config.business_types import BusinessTypesError, get_business_types
 from backend.crawler import export
 from backend.crawler.engine import estimate
 from backend.crawler.planner import build_plan
-from backend.geo.datasets import COUNTRIES, GeoError, get_country, load_areas, load_cities, load_lookup
+from backend.geo.datasets import COUNTRIES, GeoError, fold, get_country, load_areas, load_cities, load_lookup
 from backend.storage import LeadFilter, get_store
 
 router = APIRouter(prefix="/api")
@@ -128,7 +128,7 @@ def areas_search(q: str, country: str = "AU", level: str | None = None, limit: i
 def cities(country: str = "AU", state: str | None = None):
     items = load_cities(_country(country))
     if state:
-        items = [c for c in items if c["state"].lower() == state.strip().lower()]
+        items = [c for c in items if fold(c["state"]) == fold(state)]
     return items
 
 
