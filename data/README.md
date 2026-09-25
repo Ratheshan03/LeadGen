@@ -9,6 +9,7 @@ data/
 ├── australia/
 │   ├── boundaries/          lga, sa2, gccsa  (.geojson.gz, used by the app)
 │   ├── lookups/             state_to_<level>.json  (area lists for the pickers)
+│   ├── cities.json          major cities (name, state, lat, lng) used by Nearby Search
 │   └── source/              raw ABS shapefiles (not in git, only needed to rebuild)
 ```
 

@@ -29,3 +29,4 @@ pymongo==4.10.1
 # Tests
 pytest==8.3.5
 httpx==0.28.1
+mongomock==4.3.0
