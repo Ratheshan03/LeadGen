@@ -97,18 +97,23 @@ class Labeler:
         self.country = country
         self.councils = load_areas(country, country.council_level)
         self.sa2s = load_areas(country, country.dense_level)
+        self.states = load_areas(country, country.state_level) if country.state_level else None
         self._other: dict[str, object] = {}
 
     def label(self, lead: dict, fallback_state: str) -> None:
         lat, lon = lead.get("latitude"), lead.get("longitude")
-        council = sa2 = None
+        council = sa2 = region = None
         if lat is not None and lon is not None:
             council = self.councils.locate(lon, lat)
             sa2 = self.sa2s.locate(lon, lat)
+            region = self.states.locate(lon, lat) if self.states else None
         lead["country"] = self.country.name
         lead["council"] = council.name if council else None
         lead["sa2"] = sa2.name if sa2 else None
-        lead["state"] = council.state if council else (sa2.state if sa2 else fallback_state)
+        if region:
+            lead["state"] = region.name
+        else:
+            lead["state"] = council.state if council else (sa2.state if sa2 else fallback_state)
 
     def in_area(self, lead: dict, area: Area) -> bool:
         """True if the lead lies in `area` (or in no known area at all)."""

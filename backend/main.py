@@ -41,7 +41,7 @@ async def lifespan(_app: FastAPI):
 def _preload_boundaries() -> None:
     """Load council + SA2 boundaries in the background so the first crawl starts instantly."""
     for country in COUNTRIES.values():
-        for level in {country.default_level, country.council_level, country.dense_level}:
+        for level in {country.default_level, country.council_level, country.dense_level, country.state_level} - {None}:
             if country.has_data(level):
                 try:
                     load_areas(country, level)

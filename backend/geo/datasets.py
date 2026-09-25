@@ -8,9 +8,11 @@ Territorial Authorities). Boundaries come from the processed files built by
 from __future__ import annotations
 
 import difflib
+import gc
 import gzip
 import json
 import threading
+import unicodedata
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -41,6 +43,9 @@ class Country:
     council_level: str          # level used to label every lead with its council
     dense_level: str            # neighbourhood-sized level used by dense-city mode
     tile_rules: TileRules
+    # Level whose boundaries give a lead's state/region. None = use the
+    # council's state (AU councils never cross states; NZ councils can).
+    state_level: str | None = None
 
     @property
     def data_dir(self) -> Path:
@@ -84,12 +89,19 @@ COUNTRIES: dict[str, Country] = {
             "region": Level("region", "Regional Council area", "Region"),
         },
         default_level="ta", council_level="ta", dense_level="sa2", tile_rules=NZ_TILE_RULES,
+        state_level="region",
     ),
 }
 
 
 class GeoError(ValueError):
     """A user-facing problem with a country, level or area name."""
+
+
+def fold(text: str) -> str:
+    """Lower-case and strip accents/macrons: 'Whangārei' -> 'whangarei'."""
+    decomposed = unicodedata.normalize("NFKD", text or "")
+    return "".join(ch for ch in decomposed if not unicodedata.combining(ch)).strip().lower()
 
 
 def get_country(value: str) -> Country:
@@ -114,7 +126,7 @@ class Area:
 
     @property
     def key(self) -> str:
-        return self.name.strip().lower()
+        return fold(self.name)
 
     def to_dict(self) -> dict:
         return {"name": self.name, "code": self.code, "state": self.state,
@@ -144,21 +156,21 @@ class AreaSet:
     def in_state(self, state: str | None) -> list[Area]:
         if not state:
             return sorted(self.areas, key=lambda a: (a.state.lower(), a.name.lower()))
-        s = state.strip().lower()
-        return sorted((a for a in self.areas if a.state.lower() == s), key=lambda a: a.name.lower())
+        s = fold(state)
+        return sorted((a for a in self.areas if fold(a.state) == s), key=lambda a: a.name.lower())
 
     def find(self, name: str, state: str | None = None) -> Area:
-        """Find an area by name (case-insensitive). `state` disambiguates duplicates."""
-        matches = self._by_key.get((name or "").strip().lower(), [])
+        """Find an area by name (case- and accent-insensitive). `state` disambiguates duplicates."""
+        matches = self._by_key.get(fold(name), [])
         if state and len(matches) > 1:
-            matches = [a for a in matches if a.state.lower() == state.strip().lower()] or matches
+            matches = [a for a in matches if fold(a.state) == fold(state)] or matches
         if len(matches) == 1:
             return matches[0]
         label = self.country.levels[self.level].short
         if len(matches) > 1:
             states = ", ".join(sorted(a.state for a in matches))
             raise GeoError(f"'{name}' exists in several {self.country.state_label.lower()}s ({states}); please choose one.")
-        suggestions = difflib.get_close_matches((name or "").strip().lower(), list(self._by_key), n=5, cutoff=0.6)
+        suggestions = difflib.get_close_matches(fold(name), list(self._by_key), n=5, cutoff=0.6)
         hint = ""
         if suggestions:
             hint = " Did you mean: " + ", ".join(self._by_key[s][0].name for s in suggestions) + "?"
@@ -171,7 +183,7 @@ class AreaSet:
             raise GeoError(f"No area with code '{code}' in {self.country.name} ({self.level}).") from None
 
     def search(self, text: str, limit: int = 20) -> list[Area]:
-        t = (text or "").strip().lower()
+        t = fold(text)
         if not t:
             return []
         starts = [a for a in self.areas if a.key.startswith(t)]
@@ -233,6 +245,11 @@ def load_areas(country: Country | str, level: str | None = None) -> AreaSet:
         shapely.prepare([a.geometry for a in areas])
         area_set = AreaSet(country, level, areas)
         _cache[key] = area_set
+        # Boundaries live for the whole run: move them out of the garbage
+        # collector's scans, which otherwise slow tiling down noticeably.
+        fc = None
+        gc.collect()
+        gc.freeze()
         return area_set
 
 

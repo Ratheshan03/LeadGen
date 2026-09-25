@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 
 from backend.config.business_types import get_business_types
 from backend.crawler.engine import types_key
-from backend.geo.datasets import Area, Country, GeoError, get_country, load_areas, load_cities
+from backend.geo.datasets import Area, Country, GeoError, fold, get_country, load_areas, load_cities
 from backend.storage import LeadStore
 
 MODES = ("area", "state", "full", "nearby")
@@ -83,10 +83,10 @@ def build_plan(req: dict, store: LeadStore | None = None) -> CrawlPlan:
     if mode == "nearby":
         cities = load_cities(country)
         if req.get("state"):
-            cities = [c for c in cities if c["state"].lower() == req["state"].strip().lower()]
-        wanted = [c.strip().lower() for c in (req.get("cities") or []) if c and c.strip()]
+            cities = [c for c in cities if fold(c["state"]) == fold(req["state"])]
+        wanted = [fold(c) for c in (req.get("cities") or []) if c and c.strip()]
         if wanted:
-            cities = [c for c in cities if c["name"].lower() in wanted]
+            cities = [c for c in cities if fold(c["name"]) in wanted]
         if not cities:
             raise GeoError("No matching cities for Nearby Search.")
         plan.cities = cities
@@ -107,11 +107,11 @@ def build_plan(req: dict, store: LeadStore | None = None) -> CrawlPlan:
             raise GeoError(f"No areas found in '{req['state']}' for {country.name}. "
                            f"Valid {country.state_label.lower()}s: {', '.join(areas_set.states())}")
         if req.get("areas"):
-            wanted = {a.strip().lower() for a in req["areas"]}
+            wanted = {fold(a) for a in req["areas"]}
             candidates = [a for a in candidates if a.key in wanted]
     else:  # full
-        states = {s.strip().lower() for s in (req.get("states") or []) if s and s.strip()}
-        candidates = [a for a in areas_set.in_state(None) if not states or a.state.lower() in states]
+        states = {fold(s) for s in (req.get("states") or []) if s and s.strip()}
+        candidates = [a for a in areas_set.in_state(None) if not states or fold(a.state) in states]
 
     if req.get("skip_completed", True) and store is not None:
         done = store.completed_areas(country.code, plan.level, plan.types_key, plan.dense)
