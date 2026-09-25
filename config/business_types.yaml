@@ -1,0 +1,145 @@
+# =============================================================================
+#  LeadGen - business types to crawl
+# =============================================================================
+#  When you crawl with type "ALL", every type listed below is searched, one
+#  after another, in each area. Each type costs roughly 1-3 Google requests per
+#  tile (more in busy city centres), so a shorter list = cheaper crawls.
+#
+#  How to edit:
+#   * Remove a line (or put a # in front of it) to stop crawling that type.
+#   * Add a new line "- some_type" under any category to crawl it.
+#     Use Google Place types, e.g. "plumber", "car_wash", "florist".
+#     Full list: https://developers.google.com/maps/documentation/places/web-service/place-types
+#   * Categories are only for grouping in the dashboard; rename them freely.
+#   * Keep the two-space indent and the "- " in front of each type.
+#
+#  Restart the backend after editing this file.
+# =============================================================================
+
+Automotive:
+  - car_dealer
+  - car_repair
+  - car_rental
+  - gas_station
+  - parking
+  - electric_vehicle_charging_station
+
+Business:
+  - corporate_office
+  - real_estate_agency
+  - consultant
+  - insurance_agency
+  - lawyer
+  - accounting
+
+Culture:
+  - museum
+  - art_gallery
+  - cultural_center
+
+Education:
+  - university
+  - school
+  - library
+
+Entertainment and Recreation:
+  - zoo
+  - movie_theater
+  - night_club
+  - bowling_alley
+  - tourist_attraction
+  - aquarium
+  - casino
+  - event_venue
+  - park
+
+Facilities:
+  - stable
+
+Finance:
+  - bank
+  - accounting
+
+Food and Drink:
+  - restaurant
+  - cafe
+  - bar
+  - meal_delivery
+  - meal_takeaway
+  - bakery
+
+Government:
+  - city_hall
+  - police
+  - fire_station
+  - embassy
+  - courthouse
+  - post_office
+
+Health and Wellness:
+  - pharmacy
+  - doctor
+  - dentist
+  - hospital
+  - veterinary_care
+  - spa
+  - chiropractor
+  - physiotherapist
+
+Housing:
+  - apartment_complex
+  - housing_complex
+
+Lodging:
+  - hotel
+  - motel
+  - hostel
+  - campground
+  - resort_hotel
+
+Places of Worship:
+  - church
+  - mosque
+  - hindu_temple
+
+Services:
+  - electrician
+  - plumber
+  - courier_service
+  - laundry
+  - tailor
+  - barber_shop
+  - beauty_salon
+  - locksmith
+  - funeral_home
+  - hair_salon
+  - child_care_agency
+  - travel_agency
+
+Shopping:
+  - shopping_mall
+  - grocery_store
+  - supermarket
+  - hardware_store
+  - clothing_store
+  - electronics_store
+  - furniture_store
+  - liquor_store
+  - pet_store
+  - book_store
+  - department_store
+  - jewelry_store
+  - shoe_store
+
+Sports:
+  - fitness_center
+  - gym
+  - stadium
+  - golf_course
+  - swimming_pool
+  - sports_complex
+
+Transportation:
+  - train_station
+  - subway_station
+  - airport
