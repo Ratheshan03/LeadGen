@@ -1,0 +1,31 @@
+# LeadGen - Python dependencies (Python 3.10+)
+# Install:  pip install -r requirements.txt
+
+# Backend API
+fastapi==0.115.12
+uvicorn==0.34.2
+requests==2.32.4
+python-dotenv==1.1.0
+PyYAML==6.0.2
+
+# Geospatial (tiling, boundary lookups, data build scripts)
+shapely==2.1.1
+pyproj==3.7.1
+geopandas==1.1.1
+pyogrio==0.11.0
+
+# Excel export and maps
+pandas==2.3.0
+openpyxl==3.1.5
+folium==0.20.0
+
+# Dashboard
+streamlit==1.45.1
+plotly==6.1.2
+
+# Optional remote database (only used when STORAGE=mongodb)
+pymongo==4.10.1
+
+# Tests
+pytest==8.3.5
+httpx==0.28.1

@@ -1,98 +1,38 @@
-# Logs
-logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+# --- Secrets / local settings ---
+.env
+.env.*
+!.env.example
+.claude/
 
-# Dependency directories
-node_modules/
-apps/api/node_modules/
-apps/web/node_modules/
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
 
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
+# --- Runtime data (created when the app runs) ---
+storage/
+output/
+logs/
 
-# Build output
-dist/
-build/
-apps/api/dist/
-apps/api/data/geo_boundaries/
+# --- Raw source downloads (rebuild inputs, see data/README.md) ---
+data/*/source/
+
+# --- Local notes ---
+_internal_notes/
+
+# --- Legacy layout (removed after migration) ---
+apps/.venv/
+apps/api/data/geojson/*.geojson
 apps/api/output_maps/
-apps/api/venv/
-apps/web/.next/
-apps/web/out/
-
-# Runtime-generated data / artifacts (must never be committed)
+apps/api/logs/
 apps/api/api_quota_usage.json
 apps/api/.quota_*.tmp
-apps/api/tmp*
-apps/api/full_crawl_dry_run_summary_*.json
+docker-compose.yml
 
-# Environment variables
-.env
-.env.local
-.env.*.local
-apps/api/.env
-apps/web/.env
-
-# Next.js cache
-apps/web/.next/
-.next/
-
-# TypeScript cache
-*.tsbuildinfo
-
-# IDE and editor folders
-.vscode/
-.idea/
-*.sw?
-*.sublime-project
-*.sublime-workspace
-
-# OS files
+# --- OS / editors ---
 .DS_Store
 Thumbs.db
-
-# Misc
-*.local
-npm-debug.log
-yarn-error.log
-coverage/
-coverage-final.json
-.nyc_output/
-*.tgz
-
-# Optional: Lockfiles if using single lock at root
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-
-# Prisma (if used in backend)
-apps/api/prisma/migrations/
-apps/api/prisma/dev.db
-
-# Docker
-*.dockerfile
-docker-compose.override.yml
-docker-compose.yml
-.docker/
-
-# Storybook (if used)
-apps/web/.storybook-out/
-
-# Turbo / Nx / Monorepo tools
-turbo/
-.cache/
-
-__pycache__/
-
-# Python virtual environments
-venv/
-.venv/
-
-# Large GeoJSON data files (use Git LFS if needed)
-apps/api/data/geojson/*.geojson
+.vscode/
+.idea/
