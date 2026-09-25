@@ -1,0 +1,36 @@
+{
+  "Australian Capital Territory": [
+    "Australian Capital Territory"
+  ],
+  "New South Wales": [
+    "Greater Sydney",
+    "Rest of NSW"
+  ],
+  "Northern Territory": [
+    "Greater Darwin",
+    "Rest of NT"
+  ],
+  "Other Territories": [
+    "Other Territories"
+  ],
+  "Queensland": [
+    "Greater Brisbane",
+    "Rest of Qld"
+  ],
+  "South Australia": [
+    "Greater Adelaide",
+    "Rest of SA"
+  ],
+  "Tasmania": [
+    "Greater Hobart",
+    "Rest of Tas."
+  ],
+  "Victoria": [
+    "Greater Melbourne",
+    "Rest of Vic."
+  ],
+  "Western Australia": [
+    "Greater Perth",
+    "Rest of WA"
+  ]
+}
